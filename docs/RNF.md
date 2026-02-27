@@ -1,13 +1,13 @@
-Título: [RNF-001]
+Título: [RNF-001] Persistência Local e Sincronização em Background
 
 Descrição:
 
-A interface do aplicativo deve manter uma taxa de atualização estável para garantir fluidez, e as chamadas de API não devem bloquear a thread principal.
+Como o controle da dieta é diário, o usuário deve conseguir visualizar seu plano e marcar refeições como "concluídas" mesmo sem internet (Offline First).
 
 Critérios de Aceite:
 
-[ ] O aplicativo deve rodar a 60 FPS (ou 120 FPS em telas compatíveis) sem quedas bruscas de frames (jank).
+[ ] Utilizar SQLite (sqflite) ou Isar para armazenar o plano alimentar localmente no dispositivo.
 
-[ ] O estado da aplicação deve ser gerenciado de forma reativa (Bloc, Riverpod ou Provider).
+[ ] Implementar sincronização em background: quando a conexão voltar, o progresso do usuário deve ser enviado ao servidor/Firebase.
 
-[ ] O tamanho do APK final em modo release não deve ultrapassar 25MB (considerando compressão de assets).
+[ ] Garantir que o consumo de bateria seja otimizado, evitando chamadas repetitivas de IA para dados que já foram gerados.

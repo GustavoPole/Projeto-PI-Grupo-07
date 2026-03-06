@@ -1,17 +1,30 @@
 # projeto_pi
 
-A new Flutter project.
+Projeto Integrado Desenvolvimento de Sistemas Móveis
 
-## Getting Started
+---
 
-This project is a starting point for a Flutter application.
+VISÃO DO PRODUTO:
 
-A few resources to get you started if this is your first Flutter project:
+O projeto que estamos desenvolvendo é uma aplicação mobile que se chama DietHub ela tem em vista o propósito de ajudar as pessoas a seguirem dietas controladas com o acompanhamento de uma IA generativa que vai criar e modificar dietas para as pessoas com o intuito de melhorar e controlar a alimentação dos usuários.
 
-- [Learn Flutter](https://docs.flutter.dev/get-started/learn-flutter)
-- [Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Flutter learning resources](https://docs.flutter.dev/reference/learning-resources)
+---
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+PROBLEMA:
+
+Temos visto que muitas pessoas estão querendo emagrecer e não possuem uma condição para seguir acompanhamentos com nutricionistas. Por isso nossa ideia é criar essa aplicação mobile para ser um complemento para quem não tem condições e busca seguir uma dieta mais centrada afim de emagrecer.
+
+---
+
+PUBLICO:
+
+ - Pessoas procurando dietas
+ -  
+
+---
+
+OBJETIVOS:
+
+ - Criar interface de Login
+ - Criar IA para auxilio
+ - criar interface de navegação

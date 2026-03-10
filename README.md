@@ -4,10 +4,22 @@ Projeto Integrado Desenvolvimento de Sistemas Móveis
 
 ---
 
-VISÃO DO PRODUTO:
+# 🎯 Escopo do Projeto: DietHub
 
-O projeto que estamos desenvolvendo é uma aplicação mobile que se chama DietHub ela tem em vista o propósito de ajudar as pessoas a seguirem dietas controladas com o acompanhamento de uma IA generativa que vai criar e modificar dietas para as pessoas com o intuito de melhorar e controlar a alimentação dos usuários.
+O **DietHub** é um aplicativo mobile focado em democratizar o acesso a planos alimentares personalizados através de Inteligência Artificial Generativa.
 
+### ✅ O que o projeto inclui:
+* **Interface Mobile (Flutter):** Aplicativo funcional para Android e iOS.
+* **Módulo de IA:** Integração com LLMs (Gemini/OpenAI) para geração de dietas.
+* **Perfil do Usuário:** Cadastro de medidas, objetivos e restrições.
+* **Dashboard Diário:** Acompanhamento de refeições e metas hídricas.
+* **Persistência de Dados:** Armazenamento em nuvem para sincronização entre dispositivos.
+
+### ❌ O que o projeto NÃO inclui:
+* Consultas em tempo real com nutricionistas humanos.
+* Marketplace ou venda direta de suplementos.
+* Diagnóstico ou tratamento de doenças crônicas graves (O app é um guia de bem-estar).
+* Escaneamento de alimentos via câmera (visão computacional avançada) nesta fase v1.
 ---
 
 PROBLEMA:

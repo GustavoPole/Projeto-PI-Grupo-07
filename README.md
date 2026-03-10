@@ -9,7 +9,7 @@ Projeto Integrado Desenvolvimento de Sistemas Móveis
 O **DietHub** é um aplicativo mobile focado em democratizar o acesso a planos alimentares personalizados através de Inteligência Artificial Generativa.
 
 ### ✅ O que o projeto inclui:
-* **Interface Mobile (Flutter):** Aplicativo funcional para Android e iOS.
+* **Interface Mobile (Flutter):** Aplicativo funcional para Android.
 * **Módulo de IA:** Integração com LLMs (Gemini/OpenAI) para geração de dietas.
 * **Perfil do Usuário:** Cadastro de medidas, objetivos e restrições.
 * **Dashboard Diário:** Acompanhamento de refeições e metas hídricas.

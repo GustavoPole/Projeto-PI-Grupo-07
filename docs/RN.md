@@ -28,8 +28,3 @@ RN07 - Estrutura de Resposta (Parsing): A IA deve retornar os dados da dieta em 
 RN08 - Regionalização de Cardápio: O motor de IA deve priorizar alimentos de fácil acesso no país/região detectado pelo GPS ou idioma do dispositivo, evitando ingredientes importados de alto custo.
 
 RN09 - Substituição Unitária: Se o usuário solicitar a troca de um alimento específico, a IA deve sugerir um substituto com densidade calórica e macronutrientes equivalentes (ex: trocar Arroz por Batata Doce).
-
-💧 4. Hidratação e Evolução
-RN10 - Meta Hídrica: A meta diária de água deve ser calculada com base na fórmula de 35ml por quilograma de peso atual do usuário.
-
-RN11 - Janela de Atualização de Peso: O sistema só deve permitir a alteração do peso oficial para fins de gráfico e recalculo de dieta a cada 7 dias, desencorajando a pesagem diária obsessiva.

@@ -1,13 +1,9 @@
-Título: [RN-001] Ajuste Adaptativo de Calorias (Feedback da IA)
+# 🛡️ Requisitos Não Funcionais (RNF)
 
-Descrição:
-
-A IA deve atuar como um "tutor". Se o usuário registrar que comeu algo fora da dieta, a IA deve recalcular as próximas refeições do dia para manter a meta calórica.
-
-Critérios de Aceite:
-
-[ ] Se o desvio calórico for maior que 20% da meta diária, a IA deve sugerir uma compensação leve na janta ou no café da manhã do dia seguinte.
-
-[ ] Proibição: A IA nunca deve sugerir jejuns extremos (mais de 16h) ou pular refeições principais como punição por ter saído da dieta.
-
-[ ] O histórico de "furos" na dieta deve ser usado para sugerir alimentos substitutos que o usuário claramente prefere.
+| ID | Requisito | Critério de Sucesso |
+|:--- |:--- |:--- |
+| **RNF01** | **Performance da IA** | O retorno da dieta gerada pela IA deve ocorrer em até 10 segundos. |
+| **RNF02** | **Arquitetura** | O app deve ser desenvolvido em Flutter seguindo o padrão Clean Architecture. |
+| **RNF03** | **Segurança** | Os dados sensíveis dos usuários devem estar em conformidade com a LGPD. |
+| **RNF04** | **Disponibilidade** | O app deve exibir o último cardápio baixado mesmo sem conexão à internet (Cache local). |
+| **RNF05** | **Escalabilidade** | O backend (Firebase) deve suportar até 1.000 usuários simultâneos no lançamento. |

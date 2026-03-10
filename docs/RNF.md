@@ -1,13 +1,9 @@
-Título: [RNF-001] Persistência Local e Sincronização em Background
+# 🛡️ Requisitos Não Funcionais (RNF)
 
-Descrição:
-
-Como o controle da dieta é diário, o usuário deve conseguir visualizar seu plano e marcar refeições como "concluídas" mesmo sem internet (Offline First).
-
-Critérios de Aceite:
-
-[ ] Utilizar SQLite (sqflite) ou Isar para armazenar o plano alimentar localmente no dispositivo.
-
-[ ] Implementar sincronização em background: quando a conexão voltar, o progresso do usuário deve ser enviado ao servidor/Firebase.
-
-[ ] Garantir que o consumo de bateria seja otimizado, evitando chamadas repetitivas de IA para dados que já foram gerados.
+| ID | Requisito | Critério de Sucesso |
+|:--- |:--- |:--- |
+| **RNF01** | **Performance da IA** | O retorno da dieta gerada pela IA deve ocorrer em até 10 segundos. |
+| **RNF02** | **Arquitetura** | O app deve ser desenvolvido em Flutter seguindo o padrão Clean Architecture. |
+| **RNF03** | **Segurança** | Os dados sensíveis dos usuários devem estar em conformidade com a LGPD. |
+| **RNF04** | **Disponibilidade** | O app deve exibir o último cardápio baixado mesmo sem conexão à internet (Cache local). |
+| **RNF05** | **Escalabilidade** | O backend (Firebase) deve suportar até 1.000 usuários simultâneos no lançamento. |

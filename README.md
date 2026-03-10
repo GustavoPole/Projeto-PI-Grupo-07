@@ -31,7 +31,7 @@ Temos visto que muitas pessoas estão querendo emagrecer e não possuem uma cond
 PUBLICO:
 
  - Pessoas procurando dietas
- -  
+ - Pessoas Focadas em Academia
 
 ---
 

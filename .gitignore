@@ -43,3 +43,6 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+
+diethub_api/node_modules/
+diethub_api/package-lock.json

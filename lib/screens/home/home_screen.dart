@@ -54,12 +54,6 @@ class _HomeScreenState extends State<HomeScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  const SizedBox(height: 8.0),
-                  const Text(
-                    'Use IA para cadastrar o seu plano alimentar.',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(fontSize: 14, color: Colors.grey),
-                  ),
                   const SizedBox(height: 20.0),
                   // Placeholder for image/illustration
                   Container(
@@ -72,12 +66,6 @@ class _HomeScreenState extends State<HomeScreen> {
                           'assets/images/food_scan_placeholder.png',
                         ), // Você precisará adicionar esta imagem
                         fit: BoxFit.cover,
-                      ),
-                    ),
-                    child: const Center(
-                      child: Text(
-                        'Imagem de Scan de Alimentos (Placeholder)',
-                        style: TextStyle(color: Colors.grey, fontSize: 16),
                       ),
                     ),
                   ),

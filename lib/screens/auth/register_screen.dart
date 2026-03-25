@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:projeto_pi/widgets/custom_text_field.dart';
 import 'package:projeto_pi/screens/home/home_screen.dart';
-import 'package:projeto_pi/services/api_service.dart'; // Importar o serviço de API
+import 'package:projeto_pi/services/api_service.dart'; // Importe o ApiService
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
@@ -12,14 +12,22 @@ class RegisterScreen extends StatefulWidget {
 
 class _RegisterScreenState extends State<RegisterScreen> {
   final TextEditingController _nameController = TextEditingController();
+  final TextEditingController _cpfController =
+      TextEditingController(); // Novo controller para CPF
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
   final TextEditingController _confirmPasswordController =
       TextEditingController();
-  final TextEditingController _weightController = TextEditingController();
-  final TextEditingController _heightController = TextEditingController();
 
-  String _objective = 'Emagrecer'; // Objetivo padrão
+  @override
+  void dispose() {
+    _nameController.dispose();
+    _cpfController.dispose();
+    _emailController.dispose();
+    _passwordController.dispose();
+    _confirmPasswordController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -86,6 +94,13 @@ class _RegisterScreenState extends State<RegisterScreen> {
           ),
           const SizedBox(height: 20.0),
           CustomTextField(
+            controller: _cpfController,
+            hintText: 'CPF',
+            icon: Icons.badge,
+            keyboardType: TextInputType.number,
+          ),
+          const SizedBox(height: 20.0),
+          CustomTextField(
             controller: _emailController,
             hintText: 'Email',
             icon: Icons.email,
@@ -105,49 +120,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
             icon: Icons.lock,
             isPassword: true,
           ),
-          const SizedBox(height: 20.0),
-          Row(
-            children: [
-              Expanded(
-                child: CustomTextField(
-                  controller: _weightController,
-                  hintText: 'Peso (kg)',
-                  icon: Icons.scale,
-                  keyboardType: TextInputType.number,
-                ),
-              ),
-              const SizedBox(width: 10.0),
-              Expanded(
-                child: CustomTextField(
-                  controller: _heightController,
-                  hintText: 'Altura (cm)',
-                  icon: Icons.height,
-                  keyboardType: TextInputType.number,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 20.0),
-          const Text(
-            'Objetivo',
-            style: TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.bold,
-              color: Colors.grey,
-            ),
-          ),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceAround,
-            children: [
-              _buildObjectiveOption('Emagrecer'),
-              _buildObjectiveOption('Manter'),
-              _buildObjectiveOption('Ganhar massa'),
-            ],
-          ),
           const SizedBox(height: 30.0),
           ElevatedButton(
             onPressed: () async {
-              // Adicionado 'async'
               if (_passwordController.text != _confirmPasswordController.text) {
                 ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(content: Text('As senhas não coincidem.')),
@@ -157,27 +132,26 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
               final response = await ApiService.registerUser(
                 _nameController.text,
+                _cpfController.text,
                 _emailController.text,
                 _passwordController.text,
-                double.tryParse(_weightController.text) ??
-                    0.0, // Converte para double, default 0.0 se inválido
-                double.tryParse(_heightController.text) ??
-                    0.0, // Converte para double, default 0.0 se inválido
-                _objective,
               );
 
-              if (response['success']) {
-                ScaffoldMessenger.of(
-                  context,
-                ).showSnackBar(SnackBar(content: Text(response['message'])));
-                Navigator.pushReplacement(
-                  context,
-                  MaterialPageRoute(builder: (context) => const HomeScreen()),
-                );
-              } else {
-                ScaffoldMessenger.of(
-                  context,
-                ).showSnackBar(SnackBar(content: Text(response['message'])));
+              if (mounted) {
+                // Check if the widget is still in the tree
+                if (response['success']) {
+                  ScaffoldMessenger.of(
+                    context,
+                  ).showSnackBar(SnackBar(content: Text(response['message'])));
+                  Navigator.pushReplacement(
+                    context,
+                    MaterialPageRoute(builder: (context) => const HomeScreen()),
+                  );
+                } else {
+                  ScaffoldMessenger.of(
+                    context,
+                  ).showSnackBar(SnackBar(content: Text(response['message'])));
+                }
               }
             },
             style: ElevatedButton.styleFrom(
@@ -209,33 +183,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
             ],
           ),
         ],
-      ),
-    );
-  }
-
-  Widget _buildObjectiveOption(String title) {
-    return GestureDetector(
-      onTap: () {
-        setState(() {
-          _objective = title;
-        });
-      },
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 10),
-        decoration: BoxDecoration(
-          color: _objective == title ? Colors.green : Colors.grey[200],
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(
-            color: _objective == title ? Colors.green : Colors.transparent,
-          ),
-        ),
-        child: Text(
-          title,
-          style: TextStyle(
-            color: _objective == title ? Colors.white : Colors.grey[700],
-            fontWeight: FontWeight.bold,
-          ),
-        ),
       ),
     );
   }

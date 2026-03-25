@@ -1,42 +1,52 @@
 const express = require("express");
+const cors = require("cors");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const db = require("./db");
 require("dotenv").config();
 
 const app = express();
+app.use(cors());
 app.use(express.json());
 
 const JWT_SECRET = process.env.JWT_SECRET;
 
-// Rota de Registro de Usuário
+// Rota de Registro
 app.post("/register", async (req, res) => {
-  const { name, email, password, weight, height, objective } = req.body;
+  // 1. Pegamos os dados que o Flutter enviou (nome, cpf, email, password)
+  const { nome, cpf, email, password } = req.body;
+
+  // 2. Verificamos se todos os campos chegaram (Segurança!)
+  if (!nome || !cpf || !email || !password) {
+    return res.status(400).json({ message: "Todos os campos são obrigatórios!" });
+  }
 
   try {
-    const hashedPassword = await bcrypt.hash(password, 10); // Hash da senha para segurança
-    const sql = "INSERT INTO users (name, email, password, weight, height, objective) VALUES (?, ?, ?, ?, ?, ?)";
-    db.query(sql, [name, email, hashedPassword, weight, height, objective], (err, result) => {
+    // 3. Embaralhamos a senha (bcrypt)
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    // 4. Agora sim, salvamos no banco usando o nome correto da tabela e colunas
+    const sql = "INSERT INTO user (nome, cpf, email, hash_password) VALUES (?, ?, ?, ?)";
+    
+    db.query(sql, [nome, cpf, email, hashedPassword], (err, result) => {
       if (err) {
-        if (err.code === "ER_DUP_ENTRY") {
-          return res.status(409).json({ message: "Email já cadastrado." });
-        }
-        console.error("Erro ao registrar usuário: " + err.message);
-        return res.status(500).json({ message: "Erro interno do servidor." });
+        console.error("Erro ao registrar usuário:", err.message);
+        return res.status(500).json({ message: "Erro ao registrar usuário no banco." });
       }
       res.status(201).json({ message: "Usuário registrado com sucesso!" });
     });
   } catch (error) {
-    console.error("Erro ao hash da senha: " + error.message);
+    console.error("Erro ao processar registro:", error.message);
     res.status(500).json({ message: "Erro interno do servidor." });
   }
 });
+
 
 // Rota de Login de Usuário
 app.post("/login", (req, res) => {
   const { email, password } = req.body;
 
-  const sql = "SELECT * FROM users WHERE email = ?";
+  const sql = "SELECT * FROM user WHERE email = ?";
   db.query(sql, [email], async (err, results) => {
     if (err) {
       console.error("Erro ao buscar usuário: " + err.message);
@@ -47,7 +57,7 @@ app.post("/login", (req, res) => {
     }
 
     const user = results[0];
-    const isMatch = await bcrypt.compare(password, user.password); // Compara a senha fornecida com o hash salvo
+    const isMatch = await bcrypt.compare(password, user.hash_password);
 
     if (!isMatch) {
       return res.status(401).json({ message: "Email ou senha inválidos." });

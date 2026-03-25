@@ -8,12 +8,10 @@ class ApiService {
   static const String _baseUrl = 'http://192.168.0.126:3000';
 
   static Future<Map<String, dynamic>> registerUser(
-    String name,
+    String nome,
+    String cpf,
     String email,
     String password,
-    double weight,
-    double height,
-    String objective,
   ) async {
     final response = await http.post(
       Uri.parse('$_baseUrl/register'),
@@ -21,12 +19,10 @@ class ApiService {
         'Content-Type': 'application/json; charset=UTF-8',
       },
       body: jsonEncode(<String, dynamic>{
-        'name': name,
+        'nome': nome,
+        'cpf': cpf,
         'email': email,
         'password': password,
-        'weight': weight,
-        'height': height,
-        'objective': objective,
       }),
     );
 

@@ -1,31 +1,24 @@
-name: projeto_pi
-description: "A new Flutter project."
-
-publish_to: 'none' 
-
+name: diethub_app
+description: "Meu app de dieta e saúde"
 version: 1.0.0+1
 
 environment:
-  sdk: ^3.11.1
-
+  sdk: '>=3.0.0 <4.0.0'
 
 dependencies:
   flutter:
     sdk: flutter
-  http: ^1.2.1
-
-
-  cupertino_icons: ^1.0.8
+  lucide_icons: ^0.257.0
+  google_fonts: ^8.0.2
+  percent_indicator: ^4.2.3
+  intl: ^0.19.0
+  cupertino_icons: ^1.0.6
+  http: ^1.2.0
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
-  flutter_lints: ^2.0.0
-
-flutter_lints: ^6.0.0
+  flutter_lints: ^3.0.0
 
 flutter:
   uses-material-design: true
-
-  assets:
-    - assets/images/food_scan_placeholder.png

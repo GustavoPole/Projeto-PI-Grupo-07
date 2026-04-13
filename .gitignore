@@ -44,5 +44,9 @@ app.*.map.json
 /android/app/profile
 /android/app/release
 
+# Node
+node_modules/
 diethub_api/node_modules/
-diethub_api/package-lock.json
+diethub_api/db.js
+.env
+diethub_api/.env

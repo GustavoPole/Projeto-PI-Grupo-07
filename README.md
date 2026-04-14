@@ -1,10 +1,10 @@
-# 🥗 DietHub: Seu Guia Nutricional Personalizado com IA
+#  DietHub: Seu Guia Nutricional Personalizado com IA
 
-## 🚀 Visão Geral do Projeto
+##  Visão Geral do Projeto
 
 O **DietHub** é um aplicativo móvel inovador, desenvolvido para democratizar o acesso a planos alimentares personalizados. Utilizando o poder da Inteligência Artificial Generativa (LLMs como Gemini/OpenAI), o DietHub oferece dietas semanais sob medida, adaptadas às necessidades biométricas, objetivos e restrições alimentares de cada usuário. Nosso objetivo é fornecer um guia de bem-estar acessível para aqueles que buscam uma alimentação mais saudável, mas não possuem condições ou acesso a acompanhamentos nutricionais tradicionais.
 
-## ✨ Funcionalidades Principais
+##  Funcionalidades Principais
 
 O DietHub oferece um conjunto robusto de funcionalidades para auxiliar o usuário em sua jornada nutricional:
 
@@ -18,7 +18,7 @@ O DietHub oferece um conjunto robusto de funcionalidades para auxiliar o usuári
 *   **Regionalização de Cardápio:** Sugestões de alimentos de fácil acesso na região do usuário.
 *   **Substituição Inteligente de Alimentos:** Opção de trocar alimentos específicos por equivalentes nutricionais sugeridos pela IA.
 
-## 🛠️ Tecnologias Utilizadas
+##  Tecnologias Utilizadas
 
 Este projeto foi construído com as seguintes tecnologias:
 

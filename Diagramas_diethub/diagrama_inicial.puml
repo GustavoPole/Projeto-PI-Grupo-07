@@ -1,0 +1,36 @@
+@startuml
+title Estrutura do Projeto DietHub
+
+skinparam componentStyle rectangle
+
+package "Aplicativo Celular (Flutter)" {
+    [Tela de Login] as Login
+    [Tela de Cadastro] as Cadastro
+    [Tela Inicial (Home)] as Home
+    [Serviço de Conexão (API)] as ApiService
+    
+    Login --> Cadastro : "Ir para cadastro"
+    Login --> Home : "Entrar após login"
+    Cadastro --> Home : "Entrar após cadastro"
+    
+    Login ..> ApiService : "Envia dados"
+    Cadastro ..> ApiService : "Envia dados"
+}
+
+package "Servidor (Node.js)" {
+    [Rotas do Servidor] as Server
+    [Conexão com Banco] as DB
+    
+    Server --> DB : "Consulta/Salva"
+}
+
+package "Banco de Dados (MySQL)" {
+    database "Tabela de Usuários" {
+        [Dados do Usuário]
+    }
+}
+
+ApiService ~~> Server : "Chamadas via Internet"
+DB ~~> [Dados do Usuário] : "Persistência"
+
+@enduml

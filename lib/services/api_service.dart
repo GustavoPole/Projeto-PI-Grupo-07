@@ -1,11 +1,14 @@
 import 'dart:convert';
+import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 
 class ApiService {
-  // Altere para o IP da sua máquina se estiver testando em dispositivo físico.
-  // Para emuladores Android, '10.0.2.2' geralmente aponta para o localhost da máquina host.
-  // Para simuladores iOS, 'localhost' ou '127.0.0.1' funcionam.
-  static const String _baseUrl = 'http://192.168.0.126:3000';
+  static String get _baseUrl {
+    if (kIsWeb) return 'http://localhost:3000';
+    if (defaultTargetPlatform == TargetPlatform.android)
+      return 'http://10.0.2.2:3000';
+    return 'http://localhost:3000';
+  }
 
   static Future<Map<String, dynamic>> registerUser(
     String nome,
@@ -13,26 +16,23 @@ class ApiService {
     String email,
     String password,
   ) async {
-    final response = await http.post(
-      Uri.parse('$_baseUrl/register'),
-      headers: <String, String>{
-        'Content-Type': 'application/json; charset=UTF-8',
-      },
-      body: jsonEncode(<String, dynamic>{
-        'nome': nome,
-        'cpf': cpf,
-        'email': email,
-        'password': password,
-      }),
-    );
-
-    if (response.statusCode == 201) {
-      return {'success': true, 'message': jsonDecode(response.body)['message']};
-    } else {
-      return {
-        'success': false,
-        'message': jsonDecode(response.body)['message'],
-      };
+    try {
+      final res = await http.post(
+        Uri.parse('$_baseUrl/register'),
+        headers: {'Content-Type': 'application/json; charset=UTF-8'},
+        body: jsonEncode({
+          'nome': nome,
+          'cpf': cpf,
+          'email': email,
+          'password': password,
+        }),
+      );
+      final body = jsonDecode(res.body);
+      return res.statusCode == 201
+          ? {'success': true, 'message': body['message']}
+          : {'success': false, 'message': body['message']};
+    } catch (_) {
+      return {'success': false, 'message': 'Erro de conexão com o servidor.'};
     }
   }
 
@@ -40,21 +40,18 @@ class ApiService {
     String email,
     String password,
   ) async {
-    final response = await http.post(
-      Uri.parse('$_baseUrl/login'),
-      headers: <String, String>{
-        'Content-Type': 'application/json; charset=UTF-8',
-      },
-      body: jsonEncode(<String, String>{'email': email, 'password': password}),
-    );
-
-    if (response.statusCode == 200) {
-      return {'success': true, 'token': jsonDecode(response.body)['token']};
-    } else {
-      return {
-        'success': false,
-        'message': jsonDecode(response.body)['message'],
-      };
+    try {
+      final res = await http.post(
+        Uri.parse('$_baseUrl/login'),
+        headers: {'Content-Type': 'application/json; charset=UTF-8'},
+        body: jsonEncode({'email': email, 'password': password}),
+      );
+      final body = jsonDecode(res.body);
+      return res.statusCode == 200
+          ? {'success': true, 'token': body['token']}
+          : {'success': false, 'message': body['message']};
+    } catch (_) {
+      return {'success': false, 'message': 'Erro de conexão com o servidor.'};
     }
   }
 }

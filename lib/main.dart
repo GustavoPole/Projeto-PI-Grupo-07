@@ -1,8 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'package:projeto_pi/screens/auth/login_screen.dart';
+import 'package:projeto_pi/providers/app_state.dart';
 
 void main() {
-  runApp(const MyApp());
+  runApp(
+    ChangeNotifierProvider(create: (_) => AppState(), child: const MyApp()),
+  );
 }
 
 class MyApp extends StatelessWidget {
@@ -17,7 +21,7 @@ class MyApp extends StatelessWidget {
         primarySwatch: Colors.green,
         visualDensity: VisualDensity.adaptivePlatformDensity,
       ),
-      home: const LoginScreen(), // Tela inicial do aplicativo
+      home: const LoginScreen(),
     );
   }
 }

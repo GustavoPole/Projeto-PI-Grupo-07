@@ -46,3 +46,4 @@ app.*.map.json
 
 diethub_api/node_modules/
 diethub_api/package-lock.json
+diethub_api/.env

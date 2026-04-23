@@ -4,9 +4,11 @@ class AppState extends ChangeNotifier {
   // --- DADOS DO USUÁRIO ---
   String _userName = '';
   String _userEmail = '';
+  String _token = '';
 
   String get userName => _userName;
   String get userEmail => _userEmail;
+  String get token => _token;
 
   void setUser(String name, String email) {
     _userName = name;
@@ -14,10 +16,18 @@ class AppState extends ChangeNotifier {
     notifyListeners();
   }
 
+  void setToken(String token) {
+    _token = token;
+    notifyListeners();
+  }
+
   void clearUser() {
     _userName = '';
     _userEmail = '';
+    _token = '';
     _hasPlan = false;
+    _allergies = [];
+    _preferences = [];
     _meals = [];
     _caloriesConsumed = 0;
     _protein = 0;
@@ -36,6 +46,8 @@ class AppState extends ChangeNotifier {
   String _gender = '';
   String _activityLevel = '';
   double _waterGoal = 2.5;
+  List<String> _allergies = [];
+  List<String> _preferences = [];
 
   // Metas calculadas
   double _caloriesGoal = 0;
@@ -51,6 +63,8 @@ class AppState extends ChangeNotifier {
   String get gender => _gender;
   String get activityLevel => _activityLevel;
   double get waterGoal => _waterGoal;
+  List<String> get allergies => List.unmodifiable(_allergies);
+  List<String> get preferences => List.unmodifiable(_preferences);
   double get caloriesGoal => _caloriesGoal;
   double get proteinGoal => _proteinGoal;
   double get carbsGoal => _carbsGoal;
@@ -64,6 +78,8 @@ class AppState extends ChangeNotifier {
     required String gender,
     required String activityLevel,
     required double waterGoal,
+    List<String> allergies = const [],
+    List<String> preferences = const [],
   }) {
     _goal = goal;
     _weight = weight;
@@ -72,6 +88,8 @@ class AppState extends ChangeNotifier {
     _gender = gender;
     _activityLevel = activityLevel;
     _waterGoal = waterGoal;
+    _allergies = List.of(allergies);
+    _preferences = List.of(preferences);
     _hasPlan = true;
 
     // Calcula metas com base nos dados (fórmula de Harris-Benedict)

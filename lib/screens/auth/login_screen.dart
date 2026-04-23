@@ -60,9 +60,9 @@ class _LoginScreenState extends State<LoginScreen>
       if (!mounted) return;
       if (res['success']) {
         final email = _emailController.text.trim();
-        // Nome provisório extraído do email até ter endpoint de perfil
         final name = email.split('@')[0];
         context.read<AppState>().setUser(name, email);
+        context.read<AppState>().setToken(res['token'] ?? '');
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(builder: (_) => const HomeScreen()),

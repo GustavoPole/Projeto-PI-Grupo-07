@@ -2,19 +2,6 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 
-// ============================================================
-// AI SERVICE — DietHub
-// ============================================================
-// Este arquivo é o ponto central de integração com a IA.
-// Atualmente os métodos retornam dados simulados (mock).
-//
-// PARA IMPLEMENTAR A IA:
-// 1. Escolha a IA: Gemini ou OpenAI
-// 2. Adicione a chave de API no .env do servidor Node.js
-// 3. Substitua os métodos abaixo pelas chamadas reais
-// 4. O servidor Node.js já tem as rotas preparadas em server.js
-// ============================================================
-
 class AiService {
   static String get _baseUrl {
     if (kIsWeb) return 'http://localhost:3000';
@@ -24,16 +11,6 @@ class AiService {
     return 'http://localhost:3000';
   }
 
-  // ============================================================
-  // GERAR PLANO ALIMENTAR
-  // ============================================================
-  // Recebe os dados do usuário e retorna um plano alimentar.
-  //
-  // IMPLEMENTAÇÃO FUTURA:
-  // - Chamar POST /api/generate-plan no servidor Node.js
-  // - O servidor irá chamar a API da IA com os dados do usuário
-  // - A IA retornará um plano com refeições, macros e calorias
-  // ============================================================
   static Future<Map<String, dynamic>> generatePlan({
     required String goal,
     required double weight,
@@ -47,30 +24,6 @@ class AiService {
     required List<String> pathologies,
   }) async {
     try {
-      // TODO: Descomentar quando a IA estiver implementada no servidor
-      /*
-      final response = await http.post(
-        Uri.parse('$_baseUrl/api/generate-plan'),
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({
-          'goal': goal,
-          'weight': weight,
-          'height': height,
-          'age': age,
-          'gender': gender,
-          'activityLevel': activityLevel,
-          'waterGoal': waterGoal,
-          'allergies': allergies,
-          'preferences': preferences,
-          'pathologies': pathologies,
-        }),
-      );
-      if (response.statusCode == 200) {
-        return jsonDecode(response.body);
-      }
-      */
-
-      // DADOS SIMULADOS — remover quando a IA estiver implementada
       await Future.delayed(const Duration(seconds: 2));
       return _mockPlan(goal: goal, weight: weight);
     } catch (e) {
@@ -78,39 +31,12 @@ class AiService {
     }
   }
 
-  // ============================================================
-  // REGISTRAR FUGA DA DIETA
-  // ============================================================
-  // Recebe o que o usuário comeu fora do plano e retorna
-  // sugestões de ajuste para o restante do dia.
-  //
-  // IMPLEMENTAÇÃO FUTURA:
-  // - Chamar POST /api/diet-escape no servidor Node.js
-  // - A IA analisará o item consumido e sugerirá compensações
-  // ============================================================
   static Future<Map<String, dynamic>> analyzeDietEscape({
     required String foodDescription,
     required double caloriesConsumed,
     required double caloriesGoal,
   }) async {
     try {
-      // TODO: Descomentar quando a IA estiver implementada no servidor
-      /*
-      final response = await http.post(
-        Uri.parse('$_baseUrl/api/diet-escape'),
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({
-          'foodDescription': foodDescription,
-          'caloriesConsumed': caloriesConsumed,
-          'caloriesGoal': caloriesGoal,
-        }),
-      );
-      if (response.statusCode == 200) {
-        return jsonDecode(response.body);
-      }
-      */
-
-      // DADOS SIMULADOS — remover quando a IA estiver implementada
       await Future.delayed(const Duration(seconds: 2));
       return _mockDietEscape(foodDescription);
     } catch (e) {
@@ -118,28 +44,20 @@ class AiService {
     }
   }
 
-  // ============================================================
-  // SUGESTÃO DE TROCAS DE ALIMENTOS
-  // ============================================================
-  // Recebe um alimento e retorna alternativas nutricionalmente
-  // equivalentes sugeridas pela IA.
-  //
-  // IMPLEMENTAÇÃO FUTURA:
-  // - Chamar POST /api/food-swap no servidor Node.js
-  // - A IA sugerirá trocas baseadas no perfil do usuário
-  // ============================================================
   static Future<List<Map<String, dynamic>>> suggestFoodSwap({
     required String foodName,
     required String goal,
     required List<String> allergies,
     required List<String> preferences,
+    required String token,
   }) async {
     try {
-      // TODO: Descomentar quando a IA estiver implementada no servidor
-      /*
       final response = await http.post(
         Uri.parse('$_baseUrl/api/food-swap'),
-        headers: {'Content-Type': 'application/json'},
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
         body: jsonEncode({
           'foodName': foodName,
           'goal': goal,
@@ -148,25 +66,16 @@ class AiService {
         }),
       );
       if (response.statusCode == 200) {
-        return List<Map<String, dynamic>>.from(jsonDecode(response.body));
+        final data = jsonDecode(response.body);
+        if (data['success'] == true && data['swaps'] != null) {
+          return List<Map<String, dynamic>>.from(data['swaps']);
+        }
       }
-      */
-
-      // DADOS SIMULADOS — remover quando a IA estiver implementada
-      await Future.delayed(const Duration(seconds: 1));
-      return _mockFoodSwap(foodName);
+      return [];
     } catch (e) {
       return [];
     }
   }
-
-  // ============================================================
-  // DADOS SIMULADOS (MOCK)
-  // ============================================================
-  // Estes métodos serão removidos quando a IA for implementada.
-  // Eles existem apenas para o app funcionar durante o desenvolvimento.
-  // ============================================================
-
   static Map<String, dynamic> _mockPlan({
     required String goal,
     required double weight,
@@ -236,29 +145,4 @@ class AiService {
     };
   }
 
-  static List<Map<String, dynamic>> _mockFoodSwap(String food) {
-    return [
-      {
-        'original': food,
-        'suggestion': 'Batata doce',
-        'reason': 'Menor índice glicêmico e mais fibras',
-        'ratio': '100g → 120g',
-        'calories': 86,
-      },
-      {
-        'original': food,
-        'suggestion': 'Quinoa',
-        'reason': 'Proteína completa e sem glúten',
-        'ratio': '100g → 80g',
-        'calories': 120,
-      },
-      {
-        'original': food,
-        'suggestion': 'Mandioca cozida',
-        'reason': 'Opção regional com bom valor nutricional',
-        'ratio': '100g → 130g',
-        'calories': 125,
-      },
-    ];
-  }
 }

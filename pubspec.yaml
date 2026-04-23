@@ -1,7 +1,7 @@
 name: projeto_pi
 description: "A new Flutter project."
 
-publish_to: 'none'
+publish_to: "none"
 
 version: 1.0.0+1
 
@@ -14,6 +14,7 @@ dependencies:
   http: ^1.2.1
   cupertino_icons: ^1.0.8
   provider: ^6.1.2
+  file_picker: ^8.1.7
 
 dev_dependencies:
   flutter_test:

@@ -100,6 +100,8 @@ class _CreatePlanScreenState extends State<CreatePlanScreen> {
       gender: _gender,
       activityLevel: _activityLevel,
       waterGoal: double.tryParse(_waterController.text) ?? 2.5,
+      allergies: _allergies,
+      preferences: _preferences,
     );
 
     setState(() => _isLoading = false);

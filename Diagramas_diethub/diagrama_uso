@@ -1,0 +1,37 @@
+@startuml
+left to right direction
+skinparam packageStyle rectangle
+
+actor "Usuário Não Registrado" as UnregisteredUser
+actor "Usuário Registrado" as RegisteredUser
+actor "API de IA (Gemini/OpenAI)" as AIApi <<System>>
+
+rectangle "Sistema DietHub" {
+    usecase "UC07: Realizar Cadastro de Novo Usuário" as UC07
+    usecase "UC08: Realizar Login de Usuário" as UC08
+    usecase "UC01: Cadastrar Perfil Biométrico" as UC01
+    usecase "UC02: Gerar Dieta por IA" as UC02
+    usecase "UC03: Cadastrar Restrições Alimentares" as UC03
+    usecase "UC04: Registrar Refeição Concluída" as UC04
+    usecase "UC05: Registrar Ingestão de Água" as UC05
+    usecase "UC06: Visualizar Gráfico de Evolução de Peso" as UC06
+}
+
+UnregisteredUser --> UC07
+UnregisteredUser --> UC08
+
+RegisteredUser --> UC01
+RegisteredUser --> UC02
+RegisteredUser --> UC03
+RegisteredUser --> UC04
+RegisteredUser --> UC05
+RegisteredUser --> UC06
+
+UC02 -- AIApi
+
+note right of UC02
+  Utiliza dados do UC01 e UC03
+  para gerar o prompt.
+end note
+
+@enduml

@@ -18,3 +18,9 @@ Diagrama de Uso
 Diagrama Fluxo de Usuario
 
 <img width="443" height="845" alt="image" src="https://github.com/user-attachments/assets/a9e0a90c-9eb7-4835-8758-814d57e8ecf5" />
+
+---
+
+Diagrama de Casos de Uso
+
+<img width="443" height="424" alt="image" src="https://github.com/user-attachments/assets/2d0b23b4-d43b-45a3-807e-709b8af6b441" />

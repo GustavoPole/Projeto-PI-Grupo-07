@@ -1,0 +1,46 @@
+@startuml
+title Diagrama de Atividades - Fluxo Principal do Usuário (DietHub)
+
+start
+:Abrir Aplicativo;
+if (Já possui conta?) then (Sim)
+    :Ir para Tela de Login;
+    repeat
+        :Inserir e-mail e senha;
+        :Clicar em "Entrar";
+        if (Dados válidos?) then (Sim)
+            :Autenticar via API;
+            break
+        else (Não)
+            :Exibir mensagem de erro;
+        endif
+    repeat while (Tentar novamente?) is (Sim)
+    -> Não;
+    stop
+else (Não)
+    :Ir para Tela de Cadastro;
+    :Preencher dados (Nome, CPF, E-mail, Senha);
+    :Clicar em "Cadastrar";
+    if (Cadastro bem-sucedido?) then (Sim)
+        :Salvar dados no Banco;
+    else (Não)
+        :Exibir erro e corrigir;
+        stop
+    endif
+endif
+
+:Acessar Tela Inicial (Home);
+:Visualizar Resumo Diário (Macros e Calorias);
+
+fork
+    :Navegar para "Fugas";
+fork again
+    :Navegar para "Trocas";
+fork again
+    :Navegar para "Perfil";
+fork again
+    :Escanear Plano Alimentar (AI);
+end fork
+
+stop
+@enduml

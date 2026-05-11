@@ -9,6 +9,9 @@ import 'package:projeto_pi/screens/plan/create_plan_screen.dart';
 import 'package:projeto_pi/screens/log/log_meal_screen.dart';
 import 'package:projeto_pi/services/ai_service.dart';
 import 'package:projeto_pi/screens/scan/scan_plan_screen.dart';
+import 'package:projeto_pi/screens/plan/create_plan_screen.dart';
+import 'package:projeto_pi/screens/fuga/fuga_screen.dart';
+import 'package:projeto_pi/screens/profile/edit_profile_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -31,7 +34,8 @@ class _HomeScreenState extends State<HomeScreen>
 
   static String get _baseUrl {
     if (kIsWeb) return 'http://localhost:3000';
-    if (defaultTargetPlatform == TargetPlatform.android) return 'http://10.0.2.2:3000';
+    if (defaultTargetPlatform == TargetPlatform.android)
+      return 'http://10.0.2.2:3000';
     return 'http://localhost:3000';
   }
 
@@ -39,7 +43,8 @@ class _HomeScreenState extends State<HomeScreen>
   Map<String, dynamic>? _dbPlan;
 
   Future<void> _loadDbPlan() async {
-    final token = context.read<AppState>().token;
+    final state = context.read<AppState>();
+    final token = state.token;
     if (token.isEmpty) {
       if (mounted) setState(() => _planLoading = false);
       return;
@@ -55,6 +60,31 @@ class _HomeScreenState extends State<HomeScreen>
           setState(() {
             if (data['success'] == true && data['hasPlan'] == true) {
               _dbPlan = Map<String, dynamic>.from(data['plan']);
+
+              // Restaura metas de macros no AppState
+              final macro = data['max_micronutrientes'];
+              final meta = data['plan_meta'];
+              if (macro != null) {
+                state.setPlanFromDb(
+                  caloriesGoal:
+                      double.tryParse(macro['calorias'].toString()) ?? 0,
+                  proteinGoal:
+                      double.tryParse(macro['proteinas'].toString()) ?? 0,
+                  carbsGoal: double.tryParse(macro['carbos'].toString()) ?? 0,
+                  fatGoal: double.tryParse(macro['gordura'].toString()) ?? 0,
+                  waterGoal: meta != null
+                      ? (double.tryParse(meta['waterGoal'].toString()) ?? 2.5)
+                      : 2.5,
+                  goal: meta?['goal'] ?? '',
+                  weight:
+                      double.tryParse(meta?['weight']?.toString() ?? '0') ?? 0,
+                  height:
+                      double.tryParse(meta?['height']?.toString() ?? '0') ?? 0,
+                  age: int.tryParse(meta?['age']?.toString() ?? '0') ?? 0,
+                  gender: meta?['gender'] ?? '',
+                  activityLevel: meta?['activityLevel'] ?? '',
+                );
+              }
             } else {
               _dbPlan = null;
             }
@@ -153,7 +183,7 @@ class _HomeScreenState extends State<HomeScreen>
     return CustomScrollView(
       slivers: [
         SliverAppBar(
-          expandedHeight: 110,
+          expandedHeight: 120,
           floating: false,
           pinned: true,
           backgroundColor: const Color(0xFF1B5E20),
@@ -203,6 +233,17 @@ class _HomeScreenState extends State<HomeScreen>
                       color: Colors.white,
                     ),
                     onPressed: () {},
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.refresh, color: Colors.white),
+                    onPressed: () {
+                      setState(() {
+                        _planLoading = true;
+                        _dbPlan = null;
+                      });
+                      _loadDbPlan();
+                    },
+                    tooltip: 'Atualizar plano',
                   ),
                   IconButton(
                     icon: const Icon(Icons.logout, color: Colors.white),
@@ -397,7 +438,11 @@ class _HomeScreenState extends State<HomeScreen>
                   color: Colors.white.withOpacity(0.2),
                   borderRadius: BorderRadius.circular(12),
                 ),
-                child: const Icon(Icons.restaurant_menu, color: Colors.white, size: 26),
+                child: const Icon(
+                  Icons.restaurant_menu,
+                  color: Colors.white,
+                  size: 26,
+                ),
               ),
               const SizedBox(width: 14),
               Expanded(
@@ -415,7 +460,10 @@ class _HomeScreenState extends State<HomeScreen>
                     if (dataCriacao.isNotEmpty)
                       Text(
                         'Criado em $dataCriacao  •  ${refeicoes.length} refeições',
-                        style: const TextStyle(color: Colors.white70, fontSize: 12),
+                        style: const TextStyle(
+                          color: Colors.white70,
+                          fontSize: 12,
+                        ),
                       ),
                   ],
                 ),
@@ -428,7 +476,11 @@ class _HomeScreenState extends State<HomeScreen>
                   });
                   _loadDbPlan();
                 },
-                icon: const Icon(Icons.refresh, color: Colors.white70, size: 20),
+                icon: const Icon(
+                  Icons.refresh,
+                  color: Colors.white70,
+                  size: 20,
+                ),
                 tooltip: 'Atualizar',
               ),
             ],
@@ -441,11 +493,41 @@ class _HomeScreenState extends State<HomeScreen>
           style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
         ),
         const SizedBox(height: 10),
-        ...refeicoes.asMap().entries.map((entry) {
-          final i = entry.key;
-          final ref = entry.value as Map;
-          return _buildDbMealCard(ref, i, green, greenLight);
-        }),
+        if (refeicoes.isEmpty)
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(18),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: Colors.grey.withOpacity(0.2)),
+            ),
+            child: Column(
+              children: [
+                const Icon(Icons.restaurant_menu, color: Colors.grey, size: 40),
+                const SizedBox(height: 10),
+                const Text(
+                  'Nenhuma refeição cadastrada',
+                  style: TextStyle(
+                    fontWeight: FontWeight.w600,
+                    color: Colors.grey,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  'Use o Scan do plano alimentar no perfil para digitalizar seu plano completo com refeições.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(color: Colors.grey[400], fontSize: 12),
+                ),
+              ],
+            ),
+          )
+        else
+          ...refeicoes.asMap().entries.map((entry) {
+            final i = entry.key;
+            final ref = entry.value as Map;
+            return _buildDbMealCard(ref, i, green, greenLight);
+          }),
       ],
     );
   }
@@ -454,7 +536,8 @@ class _HomeScreenState extends State<HomeScreen>
     final alimentos = (ref['alimentos'] as List?) ?? [];
     final totalCal = alimentos.fold<double>(
       0,
-      (sum, a) => sum + (double.tryParse(a['calorias']?.toString() ?? '0') ?? 0),
+      (sum, a) =>
+          sum + (double.tryParse(a['calorias']?.toString() ?? '0') ?? 0),
     );
 
     final mealIcons = [
@@ -512,7 +595,11 @@ class _HomeScreenState extends State<HomeScreen>
                 ),
                 const SizedBox(width: 10),
               ],
-              Icon(Icons.local_fire_department, size: 12, color: Colors.orange[300]),
+              Icon(
+                Icons.local_fire_department,
+                size: 12,
+                color: Colors.orange[300],
+              ),
               const SizedBox(width: 3),
               Text(
                 '${totalCal.toInt()} kcal  •  ${alimentos.length} item(s)',
@@ -533,11 +620,13 @@ class _HomeScreenState extends State<HomeScreen>
                   ),
                 ]
               : alimentos.map<Widget>((al) {
-                  final cal = double.tryParse(al['calorias']?.toString() ?? '0') ?? 0;
+                  final cal =
+                      double.tryParse(al['calorias']?.toString() ?? '0') ?? 0;
                   final prot = al['proteinas']?.toString() ?? '0';
                   final carb = al['carbos']?.toString() ?? '0';
                   final gord = al['gorduras']?.toString() ?? '0';
-                  final qtd = (al['quantidade_g'] as num?)?.toStringAsFixed(0) ?? '?';
+                  final qtd =
+                      (al['quantidade_g'] as num?)?.toStringAsFixed(0) ?? '?';
 
                   return Container(
                     margin: const EdgeInsets.only(bottom: 8),
@@ -562,7 +651,10 @@ class _HomeScreenState extends State<HomeScreen>
                               const SizedBox(height: 3),
                               Text(
                                 'P: ${prot}g  •  C: ${carb}g  •  G: ${gord}g',
-                                style: TextStyle(color: Colors.grey[500], fontSize: 11),
+                                style: TextStyle(
+                                  color: Colors.grey[500],
+                                  fontSize: 11,
+                                ),
                               ),
                             ],
                           ),
@@ -572,7 +664,10 @@ class _HomeScreenState extends State<HomeScreen>
                           crossAxisAlignment: CrossAxisAlignment.end,
                           children: [
                             Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 8,
+                                vertical: 3,
+                              ),
                               decoration: BoxDecoration(
                                 color: Colors.orange[50],
                                 borderRadius: BorderRadius.circular(8),
@@ -589,7 +684,10 @@ class _HomeScreenState extends State<HomeScreen>
                             const SizedBox(height: 4),
                             Text(
                               '${qtd}g',
-                              style: TextStyle(color: Colors.grey[400], fontSize: 11),
+                              style: TextStyle(
+                                color: Colors.grey[400],
+                                fontSize: 11,
+                              ),
                             ),
                           ],
                         ),
@@ -1034,9 +1132,9 @@ class _HomeScreenState extends State<HomeScreen>
   }
 
   // ==========================================
-  // FUGAS (placeholder)
+  // FUGAS
   // ==========================================
-  Widget _buildFugasPage() => _placeholder('Fuga da Dieta', Icons.fastfood);
+  Widget _buildFugasPage() => const FugaScreen();
 
   Future<void> _searchSwap() async {
     final food = _swapController.text.trim();
@@ -1059,7 +1157,8 @@ class _HomeScreenState extends State<HomeScreen>
     setState(() {
       _swapLoading = false;
       _swapResults = results;
-      if (results.isEmpty) _swapError = 'Nenhuma sugestão encontrada. Tente outro alimento.';
+      if (results.isEmpty)
+        _swapError = 'Nenhuma sugestão encontrada. Tente outro alimento.';
     });
   }
 
@@ -1091,7 +1190,11 @@ class _HomeScreenState extends State<HomeScreen>
                         color: Colors.white.withOpacity(0.2),
                         borderRadius: BorderRadius.circular(12),
                       ),
-                      child: const Icon(Icons.swap_horiz, color: Colors.white, size: 22),
+                      child: const Icon(
+                        Icons.swap_horiz,
+                        color: Colors.white,
+                        size: 22,
+                      ),
                     ),
                     const SizedBox(width: 12),
                     const Column(
@@ -1136,10 +1239,16 @@ class _HomeScreenState extends State<HomeScreen>
                           onSubmitted: (_) => _searchSwap(),
                           decoration: const InputDecoration(
                             hintText: 'Ex: Arroz branco, Frango, Leite...',
-                            hintStyle: TextStyle(color: Colors.grey, fontSize: 14),
+                            hintStyle: TextStyle(
+                              color: Colors.grey,
+                              fontSize: 14,
+                            ),
                             prefixIcon: Icon(Icons.search, color: Colors.grey),
                             border: InputBorder.none,
-                            contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                            contentPadding: EdgeInsets.symmetric(
+                              horizontal: 16,
+                              vertical: 14,
+                            ),
                           ),
                         ),
                       ),
@@ -1147,7 +1256,10 @@ class _HomeScreenState extends State<HomeScreen>
                         onTap: _swapLoading ? null : _searchSwap,
                         child: Container(
                           margin: const EdgeInsets.all(6),
-                          padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 18,
+                            vertical: 10,
+                          ),
                           decoration: BoxDecoration(
                             color: green,
                             borderRadius: BorderRadius.circular(10),
@@ -1189,201 +1301,251 @@ class _HomeScreenState extends State<HomeScreen>
                         const SizedBox(height: 16),
                         Text(
                           'Consultando a IA...',
-                          style: TextStyle(color: Colors.grey[600], fontSize: 14),
+                          style: TextStyle(
+                            color: Colors.grey[600],
+                            fontSize: 14,
+                          ),
                         ),
                       ],
                     ),
                   )
                 : !_swapSearched
-                    ? Center(
-                        child: Padding(
-                          padding: const EdgeInsets.all(32),
-                          child: Column(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Container(
-                                padding: const EdgeInsets.all(24),
-                                decoration: BoxDecoration(
-                                  color: greenLight,
-                                  shape: BoxShape.circle,
-                                ),
-                                child: const Icon(Icons.swap_horiz, size: 48, color: green),
-                              ),
-                              const SizedBox(height: 20),
-                              const Text(
-                                'Substitua qualquer alimento',
-                                style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
-                                textAlign: TextAlign.center,
-                              ),
-                              const SizedBox(height: 8),
-                              Text(
-                                'Digite um alimento acima e a IA sugerirá 3 alternativas nutricionalmente equivalentes, respeitando suas alergias e preferências.',
-                                style: TextStyle(color: Colors.grey[500], fontSize: 14, height: 1.5),
-                                textAlign: TextAlign.center,
-                              ),
-                            ],
-                          ),
-                        ),
-                      )
-                    : _swapError.isNotEmpty
-                        ? Center(
-                            child: Padding(
-                              padding: const EdgeInsets.all(32),
-                              child: Column(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  const Icon(Icons.error_outline, size: 48, color: Colors.orange),
-                                  const SizedBox(height: 16),
-                                  Text(
-                                    _swapError,
-                                    style: TextStyle(color: Colors.grey[600], fontSize: 14),
-                                    textAlign: TextAlign.center,
-                                  ),
-                                  const SizedBox(height: 16),
-                                  ElevatedButton(
-                                    onPressed: _searchSwap,
-                                    style: ElevatedButton.styleFrom(backgroundColor: green),
-                                    child: const Text('Tentar novamente', style: TextStyle(color: Colors.white)),
-                                  ),
-                                ],
-                              ),
+                ? Center(
+                    child: Padding(
+                      padding: const EdgeInsets.all(32),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(24),
+                            decoration: BoxDecoration(
+                              color: greenLight,
+                              shape: BoxShape.circle,
                             ),
-                          )
-                        : ListView(
-                            padding: const EdgeInsets.all(20),
-                            children: [
-                              // Alimento pesquisado
-                              Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                                margin: const EdgeInsets.only(bottom: 16),
-                                decoration: BoxDecoration(
-                                  color: greenLight,
-                                  borderRadius: BorderRadius.circular(10),
-                                  border: Border.all(color: green.withOpacity(0.3)),
-                                ),
-                                child: Row(
+                            child: const Icon(
+                              Icons.swap_horiz,
+                              size: 48,
+                              color: green,
+                            ),
+                          ),
+                          const SizedBox(height: 20),
+                          const Text(
+                            'Substitua qualquer alimento',
+                            style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.w700,
+                            ),
+                            textAlign: TextAlign.center,
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            'Digite um alimento acima e a IA sugerirá 3 alternativas nutricionalmente equivalentes, respeitando suas alergias e preferências.',
+                            style: TextStyle(
+                              color: Colors.grey[500],
+                              fontSize: 14,
+                              height: 1.5,
+                            ),
+                            textAlign: TextAlign.center,
+                          ),
+                        ],
+                      ),
+                    ),
+                  )
+                : _swapError.isNotEmpty
+                ? Center(
+                    child: Padding(
+                      padding: const EdgeInsets.all(32),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(
+                            Icons.error_outline,
+                            size: 48,
+                            color: Colors.orange,
+                          ),
+                          const SizedBox(height: 16),
+                          Text(
+                            _swapError,
+                            style: TextStyle(
+                              color: Colors.grey[600],
+                              fontSize: 14,
+                            ),
+                            textAlign: TextAlign.center,
+                          ),
+                          const SizedBox(height: 16),
+                          ElevatedButton(
+                            onPressed: _searchSwap,
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: green,
+                            ),
+                            child: const Text(
+                              'Tentar novamente',
+                              style: TextStyle(color: Colors.white),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  )
+                : ListView(
+                    padding: const EdgeInsets.all(20),
+                    children: [
+                      // Alimento pesquisado
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 14,
+                          vertical: 10,
+                        ),
+                        margin: const EdgeInsets.only(bottom: 16),
+                        decoration: BoxDecoration(
+                          color: greenLight,
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(color: green.withOpacity(0.3)),
+                        ),
+                        child: Row(
+                          children: [
+                            const Icon(
+                              Icons.info_outline,
+                              color: green,
+                              size: 18,
+                            ),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: RichText(
+                                text: TextSpan(
+                                  style: const TextStyle(
+                                    color: Colors.black87,
+                                    fontSize: 13,
+                                  ),
                                   children: [
-                                    const Icon(Icons.info_outline, color: green, size: 18),
-                                    const SizedBox(width: 8),
-                                    Expanded(
-                                      child: RichText(
-                                        text: TextSpan(
-                                          style: const TextStyle(color: Colors.black87, fontSize: 13),
-                                          children: [
-                                            const TextSpan(text: 'Substitutos para: '),
-                                            TextSpan(
-                                              text: _swapController.text.trim(),
-                                              style: const TextStyle(fontWeight: FontWeight.w700, color: green),
-                                            ),
-                                          ],
-                                        ),
+                                    const TextSpan(text: 'Substitutos para: '),
+                                    TextSpan(
+                                      text: _swapController.text.trim(),
+                                      style: const TextStyle(
+                                        fontWeight: FontWeight.w700,
+                                        color: green,
                                       ),
                                     ),
                                   ],
                                 ),
                               ),
-                              // Cards de sugestão
-                              ..._swapResults.asMap().entries.map((entry) {
-                                final i = entry.key;
-                                final swap = entry.value;
-                                final icons = [Icons.eco, Icons.grain, Icons.local_dining];
-                                return Container(
-                                  margin: const EdgeInsets.only(bottom: 14),
-                                  decoration: BoxDecoration(
-                                    color: Colors.white,
-                                    borderRadius: BorderRadius.circular(16),
-                                    boxShadow: [
-                                      BoxShadow(
-                                        color: Colors.black.withOpacity(0.06),
-                                        blurRadius: 10,
-                                        offset: const Offset(0, 4),
-                                      ),
-                                    ],
-                                  ),
-                                  child: Padding(
-                                    padding: const EdgeInsets.all(16),
-                                    child: Row(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
-                                      children: [
-                                        Container(
-                                          padding: const EdgeInsets.all(12),
-                                          decoration: BoxDecoration(
-                                            color: greenLight,
-                                            borderRadius: BorderRadius.circular(12),
-                                          ),
-                                          child: Icon(icons[i % icons.length], color: green, size: 24),
-                                        ),
-                                        const SizedBox(width: 14),
-                                        Expanded(
-                                          child: Column(
-                                            crossAxisAlignment: CrossAxisAlignment.start,
-                                            children: [
-                                              Text(
-                                                swap['suggestion'] ?? '',
-                                                style: const TextStyle(
-                                                  fontWeight: FontWeight.w700,
-                                                  fontSize: 16,
-                                                ),
-                                              ),
-                                              const SizedBox(height: 4),
-                                              Text(
-                                                swap['reason'] ?? '',
-                                                style: TextStyle(
-                                                  color: Colors.grey[600],
-                                                  fontSize: 13,
-                                                  height: 1.4,
-                                                ),
-                                              ),
-                                              const SizedBox(height: 10),
-                                              Row(
-                                                children: [
-                                                  if (swap['ratio'] != null)
-                                                    _swapChip(
-                                                      Icons.swap_horiz,
-                                                      swap['ratio'],
-                                                      Colors.blue[50]!,
-                                                      Colors.blue[700]!,
-                                                    ),
-                                                  const SizedBox(width: 8),
-                                                  if (swap['calories'] != null)
-                                                    _swapChip(
-                                                      Icons.local_fire_department,
-                                                      '${swap['calories']} kcal',
-                                                      Colors.orange[50]!,
-                                                      Colors.orange[700]!,
-                                                    ),
-                                                ],
-                                              ),
-                                            ],
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                );
-                              }),
-                              const SizedBox(height: 8),
-                              // Botão nova busca
-                              OutlinedButton.icon(
-                                onPressed: () {
-                                  _swapController.clear();
-                                  setState(() {
-                                    _swapSearched = false;
-                                    _swapResults = [];
-                                    _swapError = '';
-                                  });
-                                },
-                                icon: const Icon(Icons.search, size: 18),
-                                label: const Text('Nova busca'),
-                                style: OutlinedButton.styleFrom(
-                                  foregroundColor: green,
-                                  side: const BorderSide(color: green),
-                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                                  padding: const EdgeInsets.symmetric(vertical: 12),
-                                ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      // Cards de sugestão
+                      ..._swapResults.asMap().entries.map((entry) {
+                        final i = entry.key;
+                        final swap = entry.value;
+                        final icons = [
+                          Icons.eco,
+                          Icons.grain,
+                          Icons.local_dining,
+                        ];
+                        return Container(
+                          margin: const EdgeInsets.only(bottom: 14),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(16),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withOpacity(0.06),
+                                blurRadius: 10,
+                                offset: const Offset(0, 4),
                               ),
                             ],
                           ),
+                          child: Padding(
+                            padding: const EdgeInsets.all(16),
+                            child: Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Container(
+                                  padding: const EdgeInsets.all(12),
+                                  decoration: BoxDecoration(
+                                    color: greenLight,
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  child: Icon(
+                                    icons[i % icons.length],
+                                    color: green,
+                                    size: 24,
+                                  ),
+                                ),
+                                const SizedBox(width: 14),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        swap['suggestion'] ?? '',
+                                        style: const TextStyle(
+                                          fontWeight: FontWeight.w700,
+                                          fontSize: 16,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 4),
+                                      Text(
+                                        swap['reason'] ?? '',
+                                        style: TextStyle(
+                                          color: Colors.grey[600],
+                                          fontSize: 13,
+                                          height: 1.4,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 10),
+                                      Row(
+                                        children: [
+                                          if (swap['ratio'] != null)
+                                            _swapChip(
+                                              Icons.swap_horiz,
+                                              swap['ratio'],
+                                              Colors.blue[50]!,
+                                              Colors.blue[700]!,
+                                            ),
+                                          const SizedBox(width: 8),
+                                          if (swap['calories'] != null)
+                                            _swapChip(
+                                              Icons.local_fire_department,
+                                              '${swap['calories']} kcal',
+                                              Colors.orange[50]!,
+                                              Colors.orange[700]!,
+                                            ),
+                                        ],
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        );
+                      }),
+                      const SizedBox(height: 8),
+                      // Botão nova busca
+                      OutlinedButton.icon(
+                        onPressed: () {
+                          _swapController.clear();
+                          setState(() {
+                            _swapSearched = false;
+                            _swapResults = [];
+                            _swapError = '';
+                          });
+                        },
+                        icon: const Icon(Icons.search, size: 18),
+                        label: const Text('Nova busca'),
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: green,
+                          side: const BorderSide(color: green),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                        ),
+                      ),
+                    ],
+                  ),
           ),
         ],
       ),
@@ -1402,7 +1564,14 @@ class _HomeScreenState extends State<HomeScreen>
         children: [
           Icon(icon, size: 13, color: fg),
           const SizedBox(width: 4),
-          Text(label, style: TextStyle(fontSize: 12, color: fg, fontWeight: FontWeight.w600)),
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 12,
+              color: fg,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
         ],
       ),
     );
@@ -1438,6 +1607,29 @@ class _HomeScreenState extends State<HomeScreen>
                   ? state.userEmail
                   : 'email@exemplo.com',
               style: TextStyle(color: Colors.grey[500]),
+            ),
+            const SizedBox(height: 8),
+            // Botão editar perfil
+            TextButton.icon(
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const EditProfileScreen()),
+                );
+              },
+              icon: const Icon(
+                Icons.edit_outlined,
+                color: Color(0xFF2E7D32),
+                size: 16,
+              ),
+              label: const Text(
+                'Editar perfil',
+                style: TextStyle(
+                  color: Color(0xFF2E7D32),
+                  fontWeight: FontWeight.w600,
+                  fontSize: 13,
+                ),
+              ),
             ),
             const SizedBox(height: 30),
 
@@ -1497,6 +1689,48 @@ class _HomeScreenState extends State<HomeScreen>
                 'Meta de Água',
                 '${state.waterGoal.toStringAsFixed(1)} L/dia',
               ),
+              const SizedBox(height: 12),
+              // Botão editar plano
+              SizedBox(
+                width: double.infinity,
+                height: 50,
+                child: OutlinedButton.icon(
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => const CreatePlanScreen(),
+                      ),
+                    ).then((result) {
+                      if (result == true) {
+                        setState(() {
+                          _planLoading = true;
+                          _dbPlan = null;
+                        });
+                        _loadDbPlan();
+                      }
+                    });
+                  },
+                  icon: const Icon(
+                    Icons.edit_outlined,
+                    color: Color(0xFF2E7D32),
+                    size: 20,
+                  ),
+                  label: const Text(
+                    'Alterar plano alimentar',
+                    style: TextStyle(
+                      color: Color(0xFF2E7D32),
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  style: OutlinedButton.styleFrom(
+                    side: const BorderSide(color: Color(0xFF2E7D32)),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                  ),
+                ),
+              ),
             ],
 
             const SizedBox(height: 20),
@@ -1518,10 +1752,16 @@ class _HomeScreenState extends State<HomeScreen>
                     _loadDbPlan();
                   });
                 },
-                icon: const Icon(Icons.document_scanner_rounded, color: Colors.white),
+                icon: const Icon(
+                  Icons.document_scanner_rounded,
+                  color: Colors.white,
+                ),
                 label: const Text(
                   'Scan do plano alimentar',
-                  style: TextStyle(color: Colors.white, fontWeight: FontWeight.w700),
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w700,
+                  ),
                 ),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: const Color(0xFF2E7D32),

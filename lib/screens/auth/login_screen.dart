@@ -60,7 +60,9 @@ class _LoginScreenState extends State<LoginScreen>
       if (!mounted) return;
       if (res['success']) {
         final email = _emailController.text.trim();
-        final name = email.split('@')[0];
+        // Usa o nome real retornado pelo servidor, não o email
+        final user = res['user'] as Map<String, dynamic>?;
+        final name = user?['nome'] ?? email.split('@')[0];
         context.read<AppState>().setUser(name, email);
         context.read<AppState>().setToken(res['token'] ?? '');
         Navigator.pushReplacement(

@@ -11,6 +11,7 @@ class AiService {
     return 'http://localhost:3000';
   }
 
+  // --- GERAR PLANO (mock por enquanto) ---
   static Future<Map<String, dynamic>> generatePlan({
     required String goal,
     required double weight,
@@ -31,19 +32,39 @@ class AiService {
     }
   }
 
+  // --- FUGA DA DIETA — chama API real com Gemini ---
   static Future<Map<String, dynamic>> analyzeDietEscape({
     required String foodDescription,
     required double caloriesConsumed,
     required double caloriesGoal,
+    required String token,
   }) async {
     try {
-      await Future.delayed(const Duration(seconds: 2));
-      return _mockDietEscape(foodDescription);
+      final response = await http.post(
+        Uri.parse('$_baseUrl/api/diet-escape'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+        body: jsonEncode({
+          'foodDescription': foodDescription,
+          'caloriesConsumed': caloriesConsumed,
+          'caloriesGoal': caloriesGoal,
+        }),
+      );
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        if (data['success'] == true) {
+          return {'success': true, 'analysis': data['analysis']};
+        }
+      }
+      return {'success': false, 'error': 'Erro ao analisar fuga.'};
     } catch (e) {
-      return {'error': 'Erro ao analisar fuga: $e'};
+      return {'success': false, 'error': 'Erro de conexão: $e'};
     }
   }
 
+  // --- TROCA DE ALIMENTOS — chama API real com Gemini (do seu amigo, mantido) ---
   static Future<List<Map<String, dynamic>>> suggestFoodSwap({
     required String foodName,
     required String goal,
@@ -76,6 +97,8 @@ class AiService {
       return [];
     }
   }
+
+  // --- MOCK PLAN (usado enquanto IA de plano não está implementada) ---
   static Map<String, dynamic> _mockPlan({
     required String goal,
     required double weight,
@@ -127,22 +150,4 @@ class AiService {
       },
     };
   }
-
-  static Map<String, dynamic> _mockDietEscape(String food) {
-    return {
-      'success': true,
-      'analysis': {
-        'message':
-            'Identificamos a fuga com "$food". Sem problemas, vamos ajustar!',
-        'adjustments': [
-          {'type': 'reduce', 'food': 'Arroz do jantar', 'amount': '-80g'},
-          {'type': 'reduce', 'food': 'Pão do lanche', 'amount': '-1 fatia'},
-          {'type': 'add', 'food': 'Caminhada leve', 'amount': '+20 minutos'},
-        ],
-        'motivation':
-            'Uma refeição não define sua jornada. O que importa é a consistência ao longo do tempo!',
-      },
-    };
-  }
-
 }

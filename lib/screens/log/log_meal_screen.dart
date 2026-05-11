@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import 'package:projeto_pi/providers/app_state.dart';
+import 'package:projeto_pi/services/api_service.dart';
 
 class LogMealScreen extends StatefulWidget {
   const LogMealScreen({super.key});
@@ -9,7 +12,7 @@ class LogMealScreen extends StatefulWidget {
 
 class _LogMealScreenState extends State<LogMealScreen> {
   String _selectedMeal = 'Café da manhã';
-  bool _isLoading = false;
+  bool _isSaving = false;
 
   final List<String> _mealTypes = [
     'Café da manhã',
@@ -88,11 +91,18 @@ class _LogMealScreenState extends State<LogMealScreen> {
 
   int get _totalCal => _added.fold(0, (s, f) => s + (f['cal'] as int));
 
+  // Permite o mesmo alimento em períodos diferentes
+  bool _isAddedInCurrentMeal(String foodName) {
+    return _added.any(
+      (f) => f['name'] == foodName && f['meal'] == _selectedMeal,
+    );
+  }
+
   void _addFood(Map<String, dynamic> food) {
     setState(() => _added.add({...food, 'meal': _selectedMeal}));
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text('${food['name']} adicionado!'),
+        content: Text('${food['name']} adicionado em $_selectedMeal!'),
         backgroundColor: const Color(0xFF2E7D32),
         behavior: SnackBarBehavior.floating,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -119,10 +129,44 @@ class _LogMealScreenState extends State<LogMealScreen> {
       );
       return;
     }
-    setState(() => _isLoading = true);
-    await Future.delayed(const Duration(milliseconds: 500));
+
+    setState(() => _isSaving = true);
+
+    final state = context.read<AppState>();
+
+    // Se tiver token, salva no banco também
+    if (state.token.isNotEmpty) {
+      for (final food in _added) {
+        try {
+          // Busca alimentos existentes no banco
+          final alimentos = await ApiService.getAlimentos(state.token);
+          final existing = alimentos.where(
+            (a) =>
+                a['Nome'].toString().toLowerCase() ==
+                food['name'].toString().toLowerCase(),
+          );
+
+          int? alimentoId;
+          if (existing.isNotEmpty) {
+            alimentoId = existing.first['id'] as int;
+          }
+
+          if (alimentoId != null) {
+            await ApiService.salvarRefeicao(
+              token: state.token,
+              alimentoId: alimentoId,
+              quantidadeG: 100,
+              tipo: 'consumido',
+              refeicaoReferencia: food['meal'],
+            );
+          }
+        } catch (_) {
+          // Falha silenciosa — o item ainda será adicionado localmente
+        }
+      }
+    }
+
     if (!mounted) return;
-    // Retorna a lista de alimentos para a home_screen processar
     Navigator.pop(context, List<Map<String, dynamic>>.from(_added));
   }
 
@@ -154,7 +198,7 @@ class _LogMealScreenState extends State<LogMealScreen> {
                       child: Container(
                         padding: const EdgeInsets.all(8),
                         decoration: BoxDecoration(
-                          color: Colors.white.withOpacity(0.15),
+                          color: Colors.white.withValues(alpha: 0.15),
                           borderRadius: BorderRadius.circular(10),
                         ),
                         child: const Icon(
@@ -182,7 +226,7 @@ class _LogMealScreenState extends State<LogMealScreen> {
                           vertical: 6,
                         ),
                         decoration: BoxDecoration(
-                          color: Colors.white.withOpacity(0.2),
+                          color: Colors.white.withValues(alpha: 0.2),
                           borderRadius: BorderRadius.circular(20),
                         ),
                         child: Text(
@@ -196,7 +240,30 @@ class _LogMealScreenState extends State<LogMealScreen> {
                       ),
                   ],
                 ),
-                const SizedBox(height: 16),
+                const SizedBox(height: 12),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 8,
+                  ),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.15),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: const Row(
+                    children: [
+                      Icon(Icons.info_outline, color: Colors.white70, size: 16),
+                      SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          'Selecione o período. O mesmo alimento pode ser adicionado em períodos diferentes!',
+                          style: TextStyle(color: Colors.white70, fontSize: 11),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 12),
                 SizedBox(
                   height: 38,
                   child: ListView.builder(
@@ -204,6 +271,9 @@ class _LogMealScreenState extends State<LogMealScreen> {
                     itemCount: _mealTypes.length,
                     itemBuilder: (_, i) {
                       final sel = _selectedMeal == _mealTypes[i];
+                      final count = _added
+                          .where((f) => f['meal'] == _mealTypes[i])
+                          .length;
                       return GestureDetector(
                         onTap: () =>
                             setState(() => _selectedMeal = _mealTypes[i]),
@@ -216,18 +286,45 @@ class _LogMealScreenState extends State<LogMealScreen> {
                           decoration: BoxDecoration(
                             color: sel
                                 ? Colors.white
-                                : Colors.white.withOpacity(0.15),
+                                : Colors.white.withValues(alpha: 0.15),
                             borderRadius: BorderRadius.circular(20),
                           ),
-                          child: Text(
-                            _mealTypes[i],
-                            style: TextStyle(
-                              color: sel
-                                  ? const Color(0xFF1B5E20)
-                                  : Colors.white,
-                              fontWeight: FontWeight.w600,
-                              fontSize: 12,
-                            ),
+                          child: Row(
+                            children: [
+                              Text(
+                                _mealTypes[i],
+                                style: TextStyle(
+                                  color: sel
+                                      ? const Color(0xFF1B5E20)
+                                      : Colors.white,
+                                  fontWeight: FontWeight.w600,
+                                  fontSize: 12,
+                                ),
+                              ),
+                              if (count > 0) ...[
+                                const SizedBox(width: 4),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 5,
+                                    vertical: 1,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: sel
+                                        ? const Color(0xFF2E7D32)
+                                        : Colors.white.withValues(alpha: 0.3),
+                                    borderRadius: BorderRadius.circular(10),
+                                  ),
+                                  child: Text(
+                                    '$count',
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.w700,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ],
                           ),
                         ),
                       );
@@ -244,7 +341,7 @@ class _LogMealScreenState extends State<LogMealScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Adicionados
+                  // Adicionados agrupados por período
                   if (_added.isNotEmpty) ...[
                     const Text(
                       'Adicionados',
@@ -255,87 +352,45 @@ class _LogMealScreenState extends State<LogMealScreen> {
                       ),
                     ),
                     const SizedBox(height: 10),
-                    ..._added.asMap().entries.map((e) {
-                      final food = e.value;
-                      return Container(
-                        margin: const EdgeInsets.only(bottom: 8),
-                        padding: const EdgeInsets.all(14),
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(14),
-                          border: Border.all(
-                            color: const Color(0xFF2E7D32).withOpacity(0.3),
-                          ),
-                        ),
-                        child: Row(
-                          children: [
-                            const Icon(
-                              Icons.check_circle,
-                              color: Color(0xFF2E7D32),
-                              size: 18,
-                            ),
-                            const SizedBox(width: 10),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    food['name'],
-                                    style: const TextStyle(
-                                      fontWeight: FontWeight.w600,
-                                      fontSize: 13,
-                                    ),
-                                  ),
-                                  Text(
-                                    '${food['unit']} • ${food['cal']} kcal • P:${food['p']}g C:${food['c']}g G:${food['g']}g',
-                                    style: TextStyle(
-                                      color: Colors.grey[500],
-                                      fontSize: 11,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                            IconButton(
-                              icon: const Icon(
-                                Icons.delete_outline,
-                                color: Colors.red,
-                                size: 18,
-                              ),
-                              onPressed: () => _removeFood(e.key),
-                              padding: EdgeInsets.zero,
-                              constraints: const BoxConstraints(),
-                            ),
-                          ],
-                        ),
-                      );
-                    }),
+                    ..._buildGroupedAdded(),
                     const SizedBox(height: 16),
                   ],
 
                   // Sugestões
-                  const Text(
-                    'Alimentos',
-                    style: TextStyle(
-                      fontWeight: FontWeight.w700,
-                      fontSize: 15,
-                      color: Color(0xFF1B2B1C),
-                    ),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text(
+                        'Alimentos',
+                        style: TextStyle(
+                          fontWeight: FontWeight.w700,
+                          fontSize: 15,
+                          color: Color(0xFF1B2B1C),
+                        ),
+                      ),
+                      Text(
+                        'Período: $_selectedMeal',
+                        style: const TextStyle(
+                          color: Color(0xFF2E7D32),
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    'Toque para adicionar',
+                    'Toque para adicionar no período selecionado',
                     style: TextStyle(color: Colors.grey[400], fontSize: 12),
                   ),
                   const SizedBox(height: 10),
+
                   ..._suggestions.map((food) {
-                    final isAdded = _added.any(
-                      (f) => f['name'] == food['name'],
-                    );
+                    final addedInMeal = _isAddedInCurrentMeal(food['name']);
                     return Container(
                       margin: const EdgeInsets.only(bottom: 8),
                       child: ListTile(
-                        onTap: isAdded ? null : () => _addFood(food),
+                        onTap: () => _addFood(food),
                         tileColor: Colors.white,
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(14),
@@ -344,14 +399,14 @@ class _LogMealScreenState extends State<LogMealScreen> {
                           width: 42,
                           height: 42,
                           decoration: BoxDecoration(
-                            color: isAdded
-                                ? const Color(0xFF2E7D32).withOpacity(0.1)
+                            color: addedInMeal
+                                ? const Color(0xFF2E7D32).withValues(alpha: 0.1)
                                 : const Color(0xFFF5F7F5),
                             borderRadius: BorderRadius.circular(10),
                           ),
                           child: Icon(
-                            isAdded ? Icons.check : Icons.add,
-                            color: isAdded
+                            addedInMeal ? Icons.check : Icons.add,
+                            color: addedInMeal
                                 ? const Color(0xFF2E7D32)
                                 : Colors.grey[400],
                             size: 20,
@@ -359,12 +414,10 @@ class _LogMealScreenState extends State<LogMealScreen> {
                         ),
                         title: Text(
                           food['name'],
-                          style: TextStyle(
+                          style: const TextStyle(
                             fontWeight: FontWeight.w600,
                             fontSize: 14,
-                            color: isAdded
-                                ? Colors.grey[400]
-                                : const Color(0xFF1B2B1C),
+                            color: Color(0xFF1B2B1C),
                           ),
                         ),
                         subtitle: Text(
@@ -425,7 +478,7 @@ class _LogMealScreenState extends State<LogMealScreen> {
               color: Colors.white,
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withOpacity(0.06),
+                  color: Colors.black.withValues(alpha: 0.06),
                   blurRadius: 10,
                   offset: const Offset(0, -4),
                 ),
@@ -435,7 +488,7 @@ class _LogMealScreenState extends State<LogMealScreen> {
               width: double.infinity,
               height: 52,
               child: ElevatedButton(
-                onPressed: _isLoading ? null : _save,
+                onPressed: _isSaving ? null : _save,
                 style: ElevatedButton.styleFrom(
                   backgroundColor: const Color(0xFF2E7D32),
                   elevation: 0,
@@ -443,7 +496,7 @@ class _LogMealScreenState extends State<LogMealScreen> {
                     borderRadius: BorderRadius.circular(14),
                   ),
                 ),
-                child: _isLoading
+                child: _isSaving
                     ? const SizedBox(
                         width: 20,
                         height: 20,
@@ -455,7 +508,7 @@ class _LogMealScreenState extends State<LogMealScreen> {
                     : Text(
                         _added.isEmpty
                             ? 'Adicione alimentos acima'
-                            : 'Salvar ${_added.length} alimento${_added.length > 1 ? 's' : ''} (+$_totalCal kcal)',
+                            : 'Salvar ${_added.length} item${_added.length > 1 ? 's' : ''} (+$_totalCal kcal)',
                         style: const TextStyle(
                           color: Colors.white,
                           fontWeight: FontWeight.w700,
@@ -468,5 +521,90 @@ class _LogMealScreenState extends State<LogMealScreen> {
         ],
       ),
     );
+  }
+
+  List<Widget> _buildGroupedAdded() {
+    final grouped = <String, List<Map<String, dynamic>>>{};
+    for (final item in _added) {
+      final meal = item['meal'] as String;
+      grouped.putIfAbsent(meal, () => []).add(item);
+    }
+
+    final widgets = <Widget>[];
+    for (final meal in _mealTypes) {
+      if (!grouped.containsKey(meal)) continue;
+      final items = grouped[meal]!;
+
+      widgets.add(
+        Padding(
+          padding: const EdgeInsets.only(bottom: 4),
+          child: Text(
+            meal,
+            style: const TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+              color: Color(0xFF2E7D32),
+            ),
+          ),
+        ),
+      );
+
+      for (final food in items) {
+        final globalIndex = _added.indexOf(food);
+        widgets.add(
+          Container(
+            margin: const EdgeInsets.only(bottom: 8),
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(
+                color: const Color(0xFF2E7D32).withValues(alpha: 0.3),
+              ),
+            ),
+            child: Row(
+              children: [
+                const Icon(
+                  Icons.check_circle,
+                  color: Color(0xFF2E7D32),
+                  size: 18,
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        food['name'],
+                        style: const TextStyle(
+                          fontWeight: FontWeight.w600,
+                          fontSize: 13,
+                        ),
+                      ),
+                      Text(
+                        '${food['unit']} • ${food['cal']} kcal • P:${food['p']}g C:${food['c']}g G:${food['g']}g',
+                        style: TextStyle(color: Colors.grey[500], fontSize: 11),
+                      ),
+                    ],
+                  ),
+                ),
+                IconButton(
+                  icon: const Icon(
+                    Icons.delete_outline,
+                    color: Colors.red,
+                    size: 18,
+                  ),
+                  onPressed: () => _removeFood(globalIndex),
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(),
+                ),
+              ],
+            ),
+          ),
+        );
+      }
+      widgets.add(const SizedBox(height: 8));
+    }
+    return widgets;
   }
 }

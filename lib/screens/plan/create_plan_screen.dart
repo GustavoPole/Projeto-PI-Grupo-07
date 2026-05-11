@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:projeto_pi/providers/app_state.dart';
+import 'package:projeto_pi/services/api_service.dart';
 
 class CreatePlanScreen extends StatefulWidget {
   const CreatePlanScreen({super.key});
@@ -88,11 +89,11 @@ class _CreatePlanScreenState extends State<CreatePlanScreen> {
 
   Future<void> _generatePlan() async {
     setState(() => _isLoading = true);
-    await Future.delayed(const Duration(seconds: 2));
-    if (!mounted) return;
 
-    // Salva os dados do plano no estado global
-    context.read<AppState>().setPlan(
+    final state = context.read<AppState>();
+
+    // 1. Salva localmente no Provider (calcula metas)
+    state.setPlan(
       goal: _goal,
       weight: double.tryParse(_weightController.text) ?? 70,
       height: double.tryParse(_heightController.text) ?? 170,
@@ -104,6 +105,28 @@ class _CreatePlanScreenState extends State<CreatePlanScreen> {
       preferences: _preferences,
     );
 
+    // 2. Salva no banco via API
+    if (state.token.isNotEmpty) {
+      await ApiService.savePlan(
+        token: state.token,
+        goal: _goal,
+        weight: double.tryParse(_weightController.text) ?? 70,
+        height: double.tryParse(_heightController.text) ?? 170,
+        age: int.tryParse(_ageController.text) ?? 25,
+        gender: _gender,
+        activityLevel: _activityLevel,
+        waterGoal: double.tryParse(_waterController.text) ?? 2.5,
+        caloriesGoal: state.caloriesGoal,
+        proteinGoal: state.proteinGoal,
+        carbsGoal: state.carbsGoal,
+        fatGoal: state.fatGoal,
+        allergies: _allergies,
+        preferences: _preferences,
+        pathologies: _pathologies,
+      );
+    }
+
+    if (!mounted) return;
     setState(() => _isLoading = false);
     Navigator.pop(context, true);
   }

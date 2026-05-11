@@ -5,10 +5,12 @@ class AppState extends ChangeNotifier {
   String _userName = '';
   String _userEmail = '';
   String _token = '';
+  int _userId = 0;
 
   String get userName => _userName;
   String get userEmail => _userEmail;
   String get token => _token;
+  int get userId => _userId;
 
   void setUser(String name, String email) {
     _userName = name;
@@ -21,13 +23,30 @@ class AppState extends ChangeNotifier {
     notifyListeners();
   }
 
+  void setUserId(int id) {
+    _userId = id;
+    notifyListeners();
+  }
+
   void clearUser() {
     _userName = '';
     _userEmail = '';
     _token = '';
+    _userId = 0;
     _hasPlan = false;
+    _goal = '';
+    _weight = 0;
+    _height = 0;
+    _age = 0;
+    _gender = '';
+    _activityLevel = '';
+    _waterGoal = 2.5;
     _allergies = [];
     _preferences = [];
+    _caloriesGoal = 0;
+    _proteinGoal = 0;
+    _carbsGoal = 0;
+    _fatGoal = 0;
     _meals = [];
     _caloriesConsumed = 0;
     _protein = 0;
@@ -49,7 +68,6 @@ class AppState extends ChangeNotifier {
   List<String> _allergies = [];
   List<String> _preferences = [];
 
-  // Metas calculadas
   double _caloriesGoal = 0;
   double _proteinGoal = 0;
   double _carbsGoal = 0;
@@ -70,6 +88,7 @@ class AppState extends ChangeNotifier {
   double get carbsGoal => _carbsGoal;
   double get fatGoal => _fatGoal;
 
+  // Chamado ao CRIAR plano manualmente
   void setPlan({
     required String goal,
     required double weight,
@@ -91,69 +110,82 @@ class AppState extends ChangeNotifier {
     _allergies = List.of(allergies);
     _preferences = List.of(preferences);
     _hasPlan = true;
-
-    // Calcula metas com base nos dados (fórmula de Harris-Benedict)
     _calculateGoals();
     notifyListeners();
   }
 
+  // Chamado ao CARREGAR plano do banco (login ou reload)
+  void setPlanFromDb({
+    required double caloriesGoal,
+    required double proteinGoal,
+    required double carbsGoal,
+    required double fatGoal,
+    required double waterGoal,
+    String goal = '',
+    double weight = 0,
+    double height = 0,
+    int age = 0,
+    String gender = '',
+    String activityLevel = '',
+  }) {
+    _caloriesGoal = caloriesGoal;
+    _proteinGoal = proteinGoal;
+    _carbsGoal = carbsGoal;
+    _fatGoal = fatGoal;
+    _waterGoal = waterGoal;
+    if (goal.isNotEmpty) _goal = goal;
+    if (weight > 0) _weight = weight;
+    if (height > 0) _height = height;
+    if (age > 0) _age = age;
+    if (gender.isNotEmpty) _gender = gender;
+    if (activityLevel.isNotEmpty) _activityLevel = activityLevel;
+    _hasPlan = true;
+    notifyListeners();
+  }
+
   void _calculateGoals() {
-    // TMB (Taxa Metabólica Basal) - Harris-Benedict
     double tmb;
     if (_gender == 'Masculino') {
       tmb = 88.36 + (13.4 * _weight) + (4.8 * _height) - (5.7 * _age);
     } else {
       tmb = 447.6 + (9.2 * _weight) + (3.1 * _height) - (4.3 * _age);
     }
-
-    // Fator de atividade
-    final Map<String, double> activityFactors = {
+    final factors = {
       'Sedentário': 1.2,
       'Levemente Ativo': 1.375,
       'Moderadamente Ativo': 1.55,
       'Muito Ativo': 1.725,
       'Atleta': 1.9,
     };
-    final factor = activityFactors[_activityLevel] ?? 1.2;
-    double tdee = tmb * factor;
-
-    // Ajusta com base no objetivo
+    double tdee = tmb * (factors[_activityLevel] ?? 1.2);
     switch (_goal) {
       case 'Emagrecimento':
-        tdee *= 0.85; // déficit de 15%
+        tdee *= 0.85;
         break;
       case 'Ganho de Massa':
-        tdee *= 1.10; // superávit de 10%
+        tdee *= 1.10;
         break;
       case 'Melhora da Performance':
         tdee *= 1.05;
         break;
-      default:
-        break; // Manutenção = sem ajuste
     }
-
     _caloriesGoal = tdee.roundToDouble();
-
-    // Macros baseados no objetivo
     switch (_goal) {
       case 'Emagrecimento':
         _proteinGoal = (_weight * 2.0).roundToDouble();
         _fatGoal = (_caloriesGoal * 0.25 / 9).roundToDouble();
-        _carbsGoal = ((_caloriesGoal - (_proteinGoal * 4) - (_fatGoal * 9)) / 4)
-            .roundToDouble();
         break;
       case 'Ganho de Massa':
         _proteinGoal = (_weight * 2.2).roundToDouble();
         _fatGoal = (_caloriesGoal * 0.25 / 9).roundToDouble();
-        _carbsGoal = ((_caloriesGoal - (_proteinGoal * 4) - (_fatGoal * 9)) / 4)
-            .roundToDouble();
         break;
       default:
         _proteinGoal = (_weight * 1.8).roundToDouble();
         _fatGoal = (_caloriesGoal * 0.30 / 9).roundToDouble();
-        _carbsGoal = ((_caloriesGoal - (_proteinGoal * 4) - (_fatGoal * 9)) / 4)
-            .roundToDouble();
     }
+    _carbsGoal =
+        ((_caloriesGoal - (_proteinGoal * 4) - (_fatGoal * 9)) / 4)
+            .roundToDouble();
   }
 
   // --- CONSUMO DO DIA ---
@@ -169,7 +201,7 @@ class AppState extends ChangeNotifier {
   double get carbs => _carbs;
   double get fat => _fat;
   double get waterIntake => _waterIntake;
-  List<Map<String, dynamic>> get meals => _meals;
+  List<Map<String, dynamic>> get meals => List.unmodifiable(_meals);
 
   void addMeals(List<Map<String, dynamic>> newFoods) {
     for (final food in newFoods) {
@@ -183,6 +215,7 @@ class AppState extends ChangeNotifier {
   }
 
   void removeMeal(int index) {
+    if (index < 0 || index >= _meals.length) return;
     final food = _meals[index];
     _caloriesConsumed -= (food['cal'] as int).toDouble();
     _protein -= (food['p'] as int).toDouble();

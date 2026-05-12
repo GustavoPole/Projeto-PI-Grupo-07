@@ -3,7 +3,7 @@
 Os Casos de Uso (UC) descrevem as interações entre os atores (usuários ou outros sistemas) e o sistema para alcançar um objetivo específico. Eles são fundamentais para entender as funcionalidades do sistema sob a perspectiva do usuário.
 
 ### UC01: Cadastrar Perfil Biométrico
-*   **Descrição:** Permite que o usuário forneça os dados necessários para o cálculo nutricional e personalização da dieta.
+*   **Descrição:** Permite que o usuário forneça os dados necessários para o cálculo nutricional local e personalização de preferências.
 *   **Ator Principal:** Usuário Final.
 *   **Pré-condição:** Usuário estar logado no aplicativo.
 *   **Fluxo Principal:**
@@ -11,66 +11,20 @@ Os Casos de Uso (UC) descrevem as interações entre os atores (usuários ou out
     2.  O usuário insere os seguintes dados: Peso, Altura, Idade, Gênero e Nível de Atividade Física.
     3.  O usuário seleciona o objetivo (Ex: Emagrecimento, Ganho de Massa).
     4.  O sistema valida os dados inseridos.
-    5.  O sistema salva os dados do perfil localmente e/ou na nuvem.
-*   **Pós-condição:** Perfil do usuário atualizado e pronto para ser utilizado pela IA na geração de dietas.
+    5.  O sistema salva os dados do perfil localmente no aplicativo.
+*   **Pós-condição:** Perfil do usuário atualizado e pronto para ser utilizado nos cálculos locais e envio de dados para a IA (em funcionalidades implementadas).
 
-### UC02: Gerar Dieta por IA
-*   **Descrição:** O sistema utiliza os dados do perfil do usuário e preferências para solicitar uma dieta personalizada à inteligência artificial.
-*   **Ator Principal:** Usuário Final.
-*   **Ator Secundário:** API de Inteligência Artificial (Gemini/OpenAI).
-*   **Pré-condição:** Usuário estar logado e ter um perfil biométrico cadastrado.
-*   **Fluxo Principal:**
-    1.  O usuário clica em "Gerar Nova Dieta".
-    2.  O sistema compila os dados do perfil do usuário (UC01) e as preferências alimentares (UC03).
-    3.  O sistema envia um prompt estruturado para a API de IA com todas as informações relevantes.
-    4.  A API de IA processa o prompt e retorna um plano alimentar em formato JSON.
-    5.  O sistema formata o plano alimentar recebido e o exibe na tela para o usuário.
-*   **Fluxo Alternativo (Erro de Conexão com IA):**
-    *   Se a API de IA não responder ou retornar um erro, o sistema exibe uma mensagem: "Não foi possível conectar à IA. Verifique sua conexão ou tente novamente mais tarde."
-*   **Pós-condição:** Uma dieta semanal personalizada é exibida para o usuário.
-
-### UC03: Cadastrar Restrições Alimentares
-*   **Descrição:** Permite que o usuário informe suas restrições ou preferências alimentares para que a IA as considere na geração da dieta.
+### UC02: Cadastrar Restrições Alimentares
+*   **Descrição:** Permite que o usuário informe suas restrições ou preferências alimentares para que o sistema as considere nos cálculos locais e as envie para a IA em funcionalidades implementadas.
 *   **Ator Principal:** Usuário Final.
 *   **Pré-condição:** Usuário estar logado no aplicativo.
 *   **Fluxo Principal:**
     1.  O usuário acessa a seção de "Filtros Alimentares" ou "Preferências".
     2.  O usuário seleciona as restrições aplicáveis (ex: Vegano, Low Carb, Intolerante a Lactose, Alergia a Glúten, etc.).
-    3.  O sistema salva as restrições selecionadas no perfil do usuário.
-*   **Pós-condição:** As restrições alimentares são armazenadas e serão utilizadas como filtros mandatórios na próxima geração de dieta pela IA.
+    3.  O sistema salva as restrições selecionadas no perfil do usuário localmente.
+*   **Pós-condição:** As restrições alimentares são armazenadas e serão utilizadas como filtros nos cálculos locais e no envio de prompts para a IA (em funcionalidades implementadas).
 
-### UC04: Registrar Refeição Concluída
-*   **Descrição:** Permite que o usuário marque uma refeição sugerida pela dieta como concluída.
-*   **Ator Principal:** Usuário Final.
-*   **Pré-condição:** Usuário estar logado e ter uma dieta gerada e exibida.
-*   **Fluxo Principal:**
-    1.  O usuário visualiza a dieta do dia.
-    2.  O usuário clica em um botão ou checkbox ao lado de uma refeição para marcá-la como "concluída" ou "check".
-    3.  O sistema registra a conclusão da refeição.
-*   **Pós-condição:** A refeição é marcada como concluída no log diário do usuário.
-
-### UC05: Registrar Ingestão de Água
-*   **Descrição:** Permite que o usuário registre a quantidade de água consumida e visualize sua meta diária.
-*   **Ator Principal:** Usuário Final.
-*   **Pré-condição:** Usuário estar logado no aplicativo.
-*   **Fluxo Principal:**
-    1.  O usuário acessa a seção de "Controle de Água".
-    2.  O sistema exibe a meta diária de hidratação do usuário (calculada com base nos dados do perfil).
-    3.  O usuário clica em um botão para registrar um copo de água (ou uma quantidade predefinida).
-    4.  O sistema atualiza o total de água consumida no dia.
-*   **Pós-condição:** O registro de água é atualizado e o progresso em relação à meta diária é exibido.
-
-### UC06: Visualizar Gráfico de Evolução de Peso
-*   **Descrição:** Permite que o usuário visualize seu histórico de peso em um formato gráfico para acompanhar sua evolução.
-*   **Ator Principal:** Usuário Final.
-*   **Pré-condição:** Usuário estar logado e ter inserido dados de peso em diferentes datas.
-*   **Fluxo Principal:**
-    1.  O usuário acessa a seção de "Evolução de Peso" ou "Progresso".
-    2.  O sistema recupera o histórico de peso do usuário.
-    3.  O sistema gera e exibe um gráfico mostrando a variação do peso ao longo do tempo.
-*   **Pós-condição:** O usuário visualiza seu progresso de peso através de um gráfico.
-
-### UC07: Realizar Cadastro de Novo Usuário
+### UC03: Realizar Cadastro de Novo Usuário
 *   **Descrição:** Permite que um novo usuário crie uma conta no sistema DietHub.
 *   **Ator Principal:** Usuário Não Registrado.
 *   **Pré-condição:** O usuário está na tela de cadastro.
@@ -80,14 +34,14 @@ Os Casos de Uso (UC) descrevem as interações entre os atores (usuários ou out
     3.  O sistema valida se todos os campos obrigatórios foram preenchidos e se a senha e a confirmação de senha coincidem.
     4.  O sistema envia os dados para o backend para registro.
     5.  O backend criptografa a senha e armazena os dados do usuário no banco de dados.
-    6.  O sistema exibe uma mensagem de sucesso e redireciona o usuário para a tela de login ou home.
+    6.  O sistema exibe uma mensagem de sucesso e redireciona o usuário para a tela principal (Home).
 *   **Fluxo Alternativo (Dados Inválidos/Faltando):**
     *   Se algum campo obrigatório não for preenchido ou as senhas não coincidirem, o sistema exibe uma mensagem de erro apropriada.
 *   **Fluxo Alternativo (Erro no Backend):**
     *   Se ocorrer um erro durante o registro no backend (ex: email já cadastrado, erro de banco de dados), o sistema exibe uma mensagem de erro.
 *   **Pós-condição:** Uma nova conta de usuário é criada no sistema.
 
-### UC08: Realizar Login de Usuário
+### UC04: Realizar Login de Usuário
 *   **Descrição:** Permite que um usuário registrado acesse sua conta no sistema DietHub.
 *   **Ator Principal:** Usuário Registrado.
 *   **Pré-condição:** O usuário está na tela de login.
@@ -103,3 +57,45 @@ Os Casos de Uso (UC) descrevem as interações entre os atores (usuários ou out
 *   **Fluxo Alternativo (Erro no Backend):**
     *   Se ocorrer um erro durante a autenticação no backend, o sistema exibe uma mensagem de erro.
 *   **Pós-condição:** O usuário está autenticado no sistema e tem acesso às funcionalidades protegidas.
+
+### UC05: Digitalizar Plano Alimentar
+*   **Descrição:** Permite que o usuário envie uma imagem ou PDF de um plano alimentar para que a IA extraia e estruture as informações.
+*   **Ator Principal:** Usuário Final.
+*   **Ator Secundário:** API de Inteligência Artificial (Gemini).
+*   **Pré-condição:** Usuário estar logado no aplicativo.
+*   **Fluxo Principal:**
+    1.  O usuário acessa a tela de digitalização de plano.
+    2.  O usuário seleciona um arquivo de imagem (JPG, PNG) ou PDF contendo o plano alimentar.
+    3.  O sistema envia o arquivo para a API de IA para análise.
+    4.  A API de IA processa o arquivo e retorna os dados do plano em formato JSON estruturado.
+    5.  O sistema exibe um preview do plano extraído para o usuário.
+    6.  O usuário confirma o plano, e o sistema o salva no banco de dados, desativando qualquer plano anterior.
+*   **Fluxo Alternativo (Erro na Digitalização):**
+    *   Se a IA não conseguir extrair o plano ou retornar um erro, o sistema exibe uma mensagem de erro.
+*   **Pós-condição:** Um novo plano alimentar é salvo no banco de dados e se torna o plano ativo do usuário.
+
+### UC06: Sugerir Substituição de Alimento
+*   **Descrição:** Permite que o usuário solicite sugestões de substituição para um alimento específico em seu plano alimentar.
+*   **Ator Principal:** Usuário Final.
+*   **Ator Secundário:** API de Inteligência Artificial (Gemini).
+*   **Pré-condição:** Usuário estar logado e ter um plano alimentar ativo.
+*   **Fluxo Principal:**
+    1.  O usuário visualiza seu plano alimentar ativo.
+    2.  O usuário seleciona um alimento para o qual deseja uma substituição.
+    3.  O sistema envia o nome do alimento, objetivo nutricional e preferências/alergias do usuário para a API de IA.
+    4.  A API de IA retorna uma lista de sugestões de substituição com justificativas nutricionais.
+    5.  O sistema exibe as sugestões para o usuário.
+*   **Fluxo Alternativo (Erro na Sugestão):**
+    *   Se a IA não conseguir gerar sugestões ou retornar um erro, o sistema exibe uma mensagem de erro.
+*   **Pós-condição:** O usuário recebe sugestões de substituição para o alimento selecionado.
+
+### UC07: Aceitar Substituição de Alimento
+*   **Descrição:** Permite que o usuário aceite uma sugestão de substituição de alimento, atualizando seu plano alimentar ativo.
+*   **Ator Principal:** Usuário Final.
+*   **Pré-condição:** Usuário estar logado, ter um plano alimentar ativo e ter recebido sugestões de substituição (UC10).
+*   **Fluxo Principal:**
+    1.  O usuário visualiza as sugestões de substituição.
+    2.  O usuário seleciona uma das sugestões para aceitar.
+    3.  O sistema registra a substituição no banco de dados, associando-a ao plano alimentar ativo do usuário para a data atual.
+    4.  O sistema atualiza a exibição do plano para refletir a substituição.
+*   **Pós-condição:** O plano alimentar ativo do usuário é atualizado com a substituição aceita para o dia corrente.

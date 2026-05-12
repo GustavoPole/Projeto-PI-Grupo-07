@@ -1,0 +1,16 @@
+@startuml
+actor Usuário
+participant "HomeScreen" as Home
+participant "LogMealScreen" as Log
+participant "AppState" as State
+
+Usuário -> Home : Clica em "Registrar Refeição"
+Home -> Log : Navega para LogMealScreen
+Usuário -> Log : Seleciona tipo de refeição\ne adiciona alimentos
+Usuário -> Log : Clica em "Salvar"
+Log -> Home : Retorna lista de alimentos (pop)
+Home -> State : addMeals(novosAlimentos)
+State -> State : Atualiza calorias e macros
+State -> Home : Notifica ouvintes (rebuild UI)
+Home -> Usuário : Exibe progresso atualizado
+@enduml

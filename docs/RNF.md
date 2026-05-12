@@ -1,6 +1,6 @@
 | ID | Requisito Não Funcional | Critério de Sucesso |
 | --- | --- | --- |
-| **RNF01** | **Performance da IA** | O retorno da dieta gerada pela IA deve ocorrer em até 10 segundos. |
+| **RNF01** | **Performance da IA** | O retorno da dieta gerada pela IA deve ocorrer em até 1 minuto. |
 | **RNF02** | **Arquitetura do Aplicativo** | O aplicativo deve ser desenvolvido em Flutter seguindo o padrão Clean Architecture. |
 | **RNF03** | **Segurança de Dados** | Os dados sensíveis dos usuários devem estar em conformidade com a Lei Geral de Proteção de Dados (LGPD). |
 | **RNF04** | **Disponibilidade Offline** | O aplicativo deve exibir o último cardápio baixado mesmo sem conexão à internet (Cache local). |

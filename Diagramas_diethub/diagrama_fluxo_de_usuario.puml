@@ -1,33 +1,40 @@
 @startuml
-left to right direction
-skinparam packageStyle rectangle
+start
+:Abrir App;
+if (Usuário Logado?) then (não)
+    :Tela de Login;
+    if (Tem conta?) then (não)
+        :Tela de Cadastro;
+        :Criar Conta;
+    endif
+    :Fazer Login;
+endif
 
-actor "Usuário" as User
-actor "Sistema de IA (Gemini)" as AI
+:Tela Inicial (Home);
 
-rectangle "Sistema DietHub" {
-    usecase "Cadastrar/Login" as UC1
-    usecase "Criar Plano Alimentar (Manual)" as UC2
-    usecase "Escanear Plano Alimentar (IA)" as UC3
-    usecase "Registrar Refeição Diária" as UC4
-    usecase "Registrar Consumo de Água" as UC5
-    usecase "Solicitar Troca de Alimento (IA)" as UC6
-    usecase "Analisar Fuga da Dieta (IA)" as UC7
-    usecase "Visualizar Metas Nutricionais" as UC8
-}
+if (Tem Plano Ativo?) then (não)
+    split
+        :Criar Plano Manualmente;
+        :Preencher Perfil e Metas;
+    split again
+        :Escanear Plano (PDF/Imagem);
+        :IA Extrai Dados;
+    end split
+    :Salvar Plano;
+endif
 
-User --> UC1
-User --> UC2
-User --> UC3
-User --> UC4
-User --> UC5
-User --> UC6
-User --> UC7
-User --> UC8
+repeat
+    :Visualizar Dashboard;
+    split
+        :Registrar Refeição;
+    split again
+        :Registrar Água;
+    split again
+        :Solicitar Troca de Alimento;
+    split again
+        :Analisar Fuga da Dieta;
+    end split
+repeat while (Continuar usando?)
 
-UC2 ..> AI : <<include>>
-UC3 ..> AI : <<include>>
-UC6 ..> AI : <<include>>
-UC7 ..> AI : <<include>>
-
+stop
 @enduml

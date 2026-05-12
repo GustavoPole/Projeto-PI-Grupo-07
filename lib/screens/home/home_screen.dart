@@ -28,6 +28,9 @@ class _HomeScreenState extends State<HomeScreen>
   bool _swapLoading = false;
   String _swapError = '';
   bool _swapSearched = false;
+  /// Quando não nulo, uma sugestão aceita é gravada em logs_diarios para este item do plano.
+  Map<String, dynamic>? _swapPlanContext;
+  bool _swapAccepting = false;
 
   static String get _baseUrl {
     if (kIsWeb) return 'http://localhost:3000';
@@ -38,6 +41,13 @@ class _HomeScreenState extends State<HomeScreen>
   bool _planLoading = true;
   Map<String, dynamic>? _dbPlan;
 
+  String _todayIso() {
+    final n = DateTime.now();
+    final m = n.month.toString().padLeft(2, '0');
+    final d = n.day.toString().padLeft(2, '0');
+    return '${n.year}-$m-$d';
+  }
+
   Future<void> _loadDbPlan() async {
     final token = context.read<AppState>().token;
     if (token.isEmpty) {
@@ -46,7 +56,7 @@ class _HomeScreenState extends State<HomeScreen>
     }
     try {
       final res = await http.get(
-        Uri.parse('$_baseUrl/api/my-plan'),
+        Uri.parse('$_baseUrl/api/my-plan?date=${Uri.encodeQueryComponent(_todayIso())}'),
         headers: {'Authorization': 'Bearer $token'},
       );
       if (res.statusCode == 200) {
@@ -153,7 +163,7 @@ class _HomeScreenState extends State<HomeScreen>
     return CustomScrollView(
       slivers: [
         SliverAppBar(
-          expandedHeight: 110,
+          expandedHeight: 124,
           floating: false,
           pinned: true,
           backgroundColor: const Color(0xFF1B5E20),
@@ -169,12 +179,18 @@ class _HomeScreenState extends State<HomeScreen>
                   colors: [Color(0xFF1B5E20), Color(0xFF2E7D32)],
                 ),
               ),
-              padding: const EdgeInsets.fromLTRB(20, 48, 20, 14),
+              padding: EdgeInsets.fromLTRB(
+                20,
+                MediaQuery.paddingOf(context).top + 8,
+                12,
+                10,
+              ),
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
                   Expanded(
                     child: Column(
+                      mainAxisSize: MainAxisSize.min,
                       mainAxisAlignment: MainAxisAlignment.end,
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
@@ -183,6 +199,7 @@ class _HomeScreenState extends State<HomeScreen>
                           style: TextStyle(
                             color: Colors.white.withOpacity(0.9),
                             fontSize: 14,
+                            height: 1.2,
                           ),
                         ),
                         const Text(
@@ -192,12 +209,18 @@ class _HomeScreenState extends State<HomeScreen>
                             fontSize: 24,
                             fontWeight: FontWeight.w800,
                             letterSpacing: -0.5,
+                            height: 1.05,
                           ),
                         ),
                       ],
                     ),
                   ),
                   IconButton(
+                    style: IconButton.styleFrom(
+                      visualDensity: VisualDensity.compact,
+                      padding: const EdgeInsets.all(6),
+                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                    ),
                     icon: const Icon(
                       Icons.notifications_outlined,
                       color: Colors.white,
@@ -205,6 +228,11 @@ class _HomeScreenState extends State<HomeScreen>
                     onPressed: () {},
                   ),
                   IconButton(
+                    style: IconButton.styleFrom(
+                      visualDensity: VisualDensity.compact,
+                      padding: const EdgeInsets.all(6),
+                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                    ),
                     icon: const Icon(Icons.logout, color: Colors.white),
                     onPressed: _logout,
                     tooltip: 'Sair',
@@ -360,8 +388,195 @@ class _HomeScreenState extends State<HomeScreen>
   }
 
   // ==========================================
-  // PLANO DO BANCO — refeições colapsáveis
+  // PLANO DO BANCO — resumo nutricional + refeições colapsáveis
   // ==========================================
+  double _dbItemScaleFactor(Map<String, dynamic> al) {
+    final qtd = (al['quantidade_g'] as num?)?.toDouble() ?? 0;
+    final porc = double.tryParse(al['porcao_g']?.toString() ?? '100') ?? 100;
+    return porc > 0 ? qtd / porc : 1;
+  }
+
+  double _dbScaledValue(Map<String, dynamic> al, String macroKey) {
+    final base = double.tryParse(al[macroKey]?.toString() ?? '0') ?? 0;
+    return base * _dbItemScaleFactor(al);
+  }
+
+  Widget _buildDbPlanNutritionSummary(Map<String, dynamic> plan, Color green, Color greenLight) {
+    final raw = plan['resumo_nutricional'];
+    if (raw == null || raw is! Map) return const SizedBox.shrink();
+
+    final r = Map<String, dynamic>.from(raw);
+    final calTotal = (r['calorias_total'] as num?)?.round() ?? 0;
+    final pG = (r['proteinas_g'] as num?)?.toDouble() ?? 0;
+    final cG = (r['carbos_g'] as num?)?.toDouble() ?? 0;
+    final gG = (r['gorduras_g'] as num?)?.toDouble() ?? 0;
+
+    final pctRaw = r['distribuicao_pct'];
+    final pct = pctRaw is Map ? Map<String, dynamic>.from(pctRaw) : <String, dynamic>{};
+    var pPct = (pct['proteina'] as num?)?.round() ?? 0;
+    var cPct = (pct['carboidrato'] as num?)?.round() ?? 0;
+    var gPct = (pct['gordura'] as num?)?.round() ?? 0;
+    if (pPct + cPct + gPct > 100) {
+      gPct = 100 - pPct - cPct;
+    }
+
+    final metasRaw = r['metas'];
+    Map<String, dynamic>? metas;
+    if (metasRaw is Map) metas = Map<String, dynamic>.from(metasRaw);
+
+    final metaCal = metas != null ? (metas['calorias'] as num?)?.round() : null;
+
+    const blue = Color(0xFF1565C0);
+    const orange = Color(0xFFE65100);
+    const purple = Color(0xFF6A1B9A);
+
+    return Container(
+      width: double.infinity,
+      margin: const EdgeInsets.only(bottom: 14),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.06),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.pie_chart_outline, color: green, size: 22),
+              const SizedBox(width: 8),
+              const Expanded(
+                child: Text(
+                  'Macronutrientes do plano',
+                  style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.baseline,
+            textBaseline: TextBaseline.alphabetic,
+            children: [
+              Text(
+                '$calTotal',
+                style: TextStyle(
+                  fontSize: 28,
+                  fontWeight: FontWeight.w800,
+                  color: green,
+                  height: 1,
+                ),
+              ),
+              const SizedBox(width: 4),
+              Padding(
+                padding: const EdgeInsets.only(top: 6),
+                child: Text(
+                  'kcal/dia',
+                  style: TextStyle(fontSize: 13, color: Colors.grey[600], fontWeight: FontWeight.w600),
+                ),
+              ),
+              if (metaCal != null && metaCal > 0) ...[
+                const Spacer(),
+                Flexible(
+                  child: Text(
+                    'Meta: $metaCal kcal',
+                    style: TextStyle(fontSize: 12, color: Colors.grey[500]),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    textAlign: TextAlign.end,
+                  ),
+                ),
+              ],
+            ],
+          ),
+          if (pPct + cPct + gPct > 0) ...[
+            const SizedBox(height: 12),
+            ClipRRect(
+              borderRadius: BorderRadius.circular(8),
+              child: SizedBox(
+                height: 10,
+                child: Row(
+                  children: [
+                    if (pPct > 0)
+                      Expanded(
+                        flex: pPct.clamp(1, 100),
+                        child: Container(color: blue),
+                      ),
+                    if (cPct > 0)
+                      Expanded(
+                        flex: cPct.clamp(1, 100),
+                        child: Container(color: orange),
+                      ),
+                    if (gPct > 0)
+                      Expanded(
+                        flex: gPct.clamp(1, 100),
+                        child: Container(color: purple),
+                      ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+          const SizedBox(height: 12),
+          Wrap(
+            spacing: 10,
+            runSpacing: 8,
+            children: [
+              _dbMacroChip('Proteínas', pG, pPct, blue, greenLight),
+              _dbMacroChip('Carboidratos', cG, cPct, orange, greenLight),
+              _dbMacroChip('Gorduras', gG, gPct, purple, greenLight),
+            ],
+          ),
+          if (metas != null &&
+              (((metas['proteinas'] as num?) ?? 0) > 0 ||
+                  ((metas['carbos'] as num?) ?? 0) > 0 ||
+                  ((metas['gordura'] as num?) ?? 0) > 0)) ...[
+            const SizedBox(height: 10),
+            Text(
+              'Metas (g/dia): P ${(metas['proteinas'] as num?)?.toStringAsFixed(0) ?? '—'}  •  C ${(metas['carbos'] as num?)?.toStringAsFixed(0) ?? '—'}  •  G ${(metas['gordura'] as num?)?.toStringAsFixed(0) ?? '—'}',
+              style: TextStyle(fontSize: 11, color: Colors.grey[500], height: 1.3),
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _dbMacroChip(String label, double grams, int pct, Color color, Color bg) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        color: bg,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: color.withOpacity(0.25)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(label, style: TextStyle(fontSize: 11, color: Colors.grey[700], fontWeight: FontWeight.w600)),
+          const SizedBox(height: 2),
+          Text(
+            '${grams.toStringAsFixed(grams >= 10 ? 0 : 1)} g',
+            style: TextStyle(fontSize: 15, fontWeight: FontWeight.w800, color: color),
+          ),
+          Text('~$pct% kcal', style: TextStyle(fontSize: 10, color: Colors.grey[600])),
+        ],
+      ),
+    );
+  }
+
   Widget _buildDbPlanSection(Map<String, dynamic> plan) {
     const green = Color(0xFF2E7D32);
     const greenLight = Color(0xFFE8F5E9);
@@ -405,17 +620,21 @@ class _HomeScreenState extends State<HomeScreen>
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      plan['nome'] ?? 'Plano Alimentar',
+                      plan['nome']?.toString() ?? 'Plano Alimentar',
                       style: const TextStyle(
                         color: Colors.white,
                         fontSize: 16,
                         fontWeight: FontWeight.w700,
                       ),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
                     ),
                     if (dataCriacao.isNotEmpty)
                       Text(
                         'Criado em $dataCriacao  •  ${refeicoes.length} refeições',
                         style: const TextStyle(color: Colors.white70, fontSize: 12),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                       ),
                   ],
                 ),
@@ -435,6 +654,8 @@ class _HomeScreenState extends State<HomeScreen>
           ),
         ),
 
+        _buildDbPlanNutritionSummary(plan, green, greenLight),
+
         // Refeições colapsáveis
         const Text(
           'Refeições do plano',
@@ -450,12 +671,89 @@ class _HomeScreenState extends State<HomeScreen>
     );
   }
 
+  void _openSwapFromPlan({
+    required int itemRefeicaoBaseId,
+    required String nomeParaBusca,
+  }) {
+    setState(() {
+      _swapPlanContext = {'item_refeicao_base_id': itemRefeicaoBaseId};
+      _swapController.text = nomeParaBusca;
+      _swapSearched = false;
+      _swapResults = [];
+      _swapError = '';
+      _selectedIndex = 2;
+    });
+  }
+
+  Future<void> _acceptSwapSuggestion(Map<String, dynamic> swap) async {
+    final ctx = _swapPlanContext;
+    final itemId = ctx == null ? null : int.tryParse(ctx['item_refeicao_base_id']?.toString() ?? '');
+    if (itemId == null) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Use o ícone de troca ao lado de um alimento do plano na aba Início.'),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+      return;
+    }
+    final nome = swap['suggestion']?.toString().trim() ?? '';
+    if (nome.isEmpty) return;
+
+    final token = context.read<AppState>().token;
+    if (token.isEmpty) return;
+
+    setState(() => _swapAccepting = true);
+    final novoAlimento = <String, dynamic>{
+      'Nome': nome,
+      'porcao_g': '100',
+      'calorias': '${swap['calories'] ?? 0}',
+      'proteinas': '0',
+      'carbos': '0',
+      'gorduras': '0',
+    };
+    final result = await AiService.acceptFoodSwap(
+      token: token,
+      data: _todayIso(),
+      itemRefeicaoBaseId: itemId,
+      novoAlimento: novoAlimento,
+    );
+    if (!mounted) return;
+    setState(() => _swapAccepting = false);
+
+    if (result['success'] == true) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Troca registrada para hoje: $nome'),
+          backgroundColor: const Color(0xFF2E7D32),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+      setState(() {
+        _swapPlanContext = null;
+        _swapController.clear();
+        _swapSearched = false;
+        _swapResults = [];
+      });
+      await _loadDbPlan();
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(result['message']?.toString() ?? 'Falha ao registrar troca.'),
+          backgroundColor: Colors.red[800],
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    }
+  }
+
   Widget _buildDbMealCard(Map ref, int index, Color green, Color greenLight) {
     final alimentos = (ref['alimentos'] as List?) ?? [];
-    final totalCal = alimentos.fold<double>(
-      0,
-      (sum, a) => sum + (double.tryParse(a['calorias']?.toString() ?? '0') ?? 0),
-    );
+    final totalCal = alimentos.fold<double>(0, (sum, a) {
+      final m = Map<String, dynamic>.from(a as Map);
+      return sum + _dbScaledValue(m, 'calorias');
+    });
 
     final mealIcons = [
       Icons.wb_sunny_outlined,
@@ -482,8 +780,8 @@ class _HomeScreenState extends State<HomeScreen>
       child: Theme(
         data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
         child: ExpansionTile(
-          tilePadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-          childrenPadding: const EdgeInsets.fromLTRB(16, 0, 16, 14),
+          tilePadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+          childrenPadding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
           leading: Container(
             width: 42,
             height: 42,
@@ -501,21 +799,21 @@ class _HomeScreenState extends State<HomeScreen>
             ref['nome']?.toString() ?? 'Refeição',
             style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15),
           ),
-          subtitle: Row(
+          subtitle: Wrap(
+            crossAxisAlignment: WrapCrossAlignment.center,
+            spacing: 6,
+            runSpacing: 4,
             children: [
               if ((ref['horario']?.toString() ?? '').isNotEmpty) ...[
                 Icon(Icons.access_time, size: 12, color: Colors.grey[400]),
-                const SizedBox(width: 3),
                 Text(
                   ref['horario'].toString(),
                   style: TextStyle(color: Colors.grey[500], fontSize: 12),
                 ),
-                const SizedBox(width: 10),
               ],
               Icon(Icons.local_fire_department, size: 12, color: Colors.orange[300]),
-              const SizedBox(width: 3),
               Text(
-                '${totalCal.toInt()} kcal  •  ${alimentos.length} item(s)',
+                '${totalCal.round()} kcal  •  ${alimentos.length} item(s)',
                 style: TextStyle(color: Colors.grey[500], fontSize: 12),
               ),
             ],
@@ -533,41 +831,71 @@ class _HomeScreenState extends State<HomeScreen>
                   ),
                 ]
               : alimentos.map<Widget>((al) {
-                  final cal = double.tryParse(al['calorias']?.toString() ?? '0') ?? 0;
-                  final prot = al['proteinas']?.toString() ?? '0';
-                  final carb = al['carbos']?.toString() ?? '0';
-                  final gord = al['gorduras']?.toString() ?? '0';
-                  final qtd = (al['quantidade_g'] as num?)?.toStringAsFixed(0) ?? '?';
+                  final alMap = Map<String, dynamic>.from(al as Map);
+                  final cal = _dbScaledValue(alMap, 'calorias');
+                  final qtd = (alMap['quantidade_g'] as num?)?.toStringAsFixed(0) ?? '?';
+                  final itemSlot = int.tryParse(alMap['item_refeicao_base_id']?.toString() ?? '');
+                  final trocaHoje = alMap['trocaDoDia'] == true;
+                  final nomeBusca =
+                      (alMap['alimento_original_nome'] ?? alMap['nome'])?.toString() ?? '';
 
                   return Container(
                     margin: const EdgeInsets.only(bottom: 8),
-                    padding: const EdgeInsets.all(12),
+                    padding: const EdgeInsets.fromLTRB(10, 10, 6, 10),
                     decoration: BoxDecoration(
                       color: const Color(0xFFF5F7F5),
                       borderRadius: BorderRadius.circular(12),
+                      border: trocaHoje ? Border.all(color: green.withOpacity(0.45)) : null,
                     ),
                     child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Expanded(
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text(
-                                al['nome']?.toString() ?? '',
-                                style: const TextStyle(
-                                  fontWeight: FontWeight.w600,
-                                  fontSize: 14,
-                                ),
+                              Row(
+                                children: [
+                                  Flexible(
+                                    child: Text(
+                                      alMap['nome']?.toString() ?? '',
+                                      style: const TextStyle(
+                                        fontWeight: FontWeight.w600,
+                                        fontSize: 14,
+                                      ),
+                                      maxLines: 2,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ),
+                                  if (trocaHoje) ...[
+                                    const SizedBox(width: 8),
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                      decoration: BoxDecoration(
+                                        color: greenLight,
+                                        borderRadius: BorderRadius.circular(6),
+                                      ),
+                                      child: Text(
+                                        'Troca hoje',
+                                        style: TextStyle(
+                                          color: green,
+                                          fontSize: 10,
+                                          fontWeight: FontWeight.w700,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ],
                               ),
                               const SizedBox(height: 3),
                               Text(
-                                'P: ${prot}g  •  C: ${carb}g  •  G: ${gord}g',
+                                'P: ${_dbScaledValue(alMap, 'proteinas').toStringAsFixed(1)}g  •  C: ${_dbScaledValue(alMap, 'carbos').toStringAsFixed(1)}g  •  G: ${_dbScaledValue(alMap, 'gorduras').toStringAsFixed(1)}g',
                                 style: TextStyle(color: Colors.grey[500], fontSize: 11),
                               ),
                             ],
                           ),
                         ),
-                        const SizedBox(width: 10),
+                        const SizedBox(width: 8),
                         Column(
                           crossAxisAlignment: CrossAxisAlignment.end,
                           children: [
@@ -578,7 +906,7 @@ class _HomeScreenState extends State<HomeScreen>
                                 borderRadius: BorderRadius.circular(8),
                               ),
                               child: Text(
-                                '${cal.toInt()} kcal',
+                                '${cal.round()} kcal',
                                 style: TextStyle(
                                   color: Colors.orange[800],
                                   fontSize: 12,
@@ -593,6 +921,17 @@ class _HomeScreenState extends State<HomeScreen>
                             ),
                           ],
                         ),
+                        if (itemSlot != null)
+                          IconButton(
+                            tooltip: 'Trocar com IA',
+                            padding: EdgeInsets.zero,
+                            constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
+                            onPressed: () => _openSwapFromPlan(
+                              itemRefeicaoBaseId: itemSlot,
+                              nomeParaBusca: nomeBusca,
+                            ),
+                            icon: Icon(Icons.swap_horiz, color: green, size: 22),
+                          ),
                       ],
                     ),
                   );
@@ -1178,6 +1517,35 @@ class _HomeScreenState extends State<HomeScreen>
             ),
           ),
 
+          if (_swapPlanContext != null)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 10, 16, 0),
+              child: Material(
+                color: greenLight,
+                borderRadius: BorderRadius.circular(12),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                  child: Row(
+                    children: [
+                      Icon(Icons.event_available, color: green, size: 22),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Text(
+                          'Item do plano selecionado. Aceitar uma sugestão grava a troca só para ${_todayIso()}.',
+                          style: TextStyle(fontSize: 13, color: Colors.grey[800], height: 1.35),
+                        ),
+                      ),
+                      IconButton(
+                        tooltip: 'Cancelar seleção',
+                        icon: Icon(Icons.close, color: Colors.grey[700], size: 22),
+                        onPressed: () => setState(() => _swapPlanContext = null),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+
           // Conteúdo
           Expanded(
             child: _swapLoading
@@ -1217,7 +1585,7 @@ class _HomeScreenState extends State<HomeScreen>
                               ),
                               const SizedBox(height: 8),
                               Text(
-                                'Digite um alimento acima e a IA sugerirá 3 alternativas nutricionalmente equivalentes, respeitando suas alergias e preferências.',
+                                'Digite um alimento acima e a IA sugerirá 3 alternativas nutricionalmente equivalentes, respeitando suas alergias e preferências. Para salvar no seu plano do dia, use o ícone de troca ao lado de um alimento na aba Início e depois aceite uma sugestão aqui.',
                                 style: TextStyle(color: Colors.grey[500], fontSize: 14, height: 1.5),
                                 textAlign: TextAlign.center,
                               ),
@@ -1302,61 +1670,97 @@ class _HomeScreenState extends State<HomeScreen>
                                   ),
                                   child: Padding(
                                     padding: const EdgeInsets.all(16),
-                                    child: Row(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.stretch,
                                       children: [
-                                        Container(
-                                          padding: const EdgeInsets.all(12),
-                                          decoration: BoxDecoration(
-                                            color: greenLight,
-                                            borderRadius: BorderRadius.circular(12),
-                                          ),
-                                          child: Icon(icons[i % icons.length], color: green, size: 24),
-                                        ),
-                                        const SizedBox(width: 14),
-                                        Expanded(
-                                          child: Column(
-                                            crossAxisAlignment: CrossAxisAlignment.start,
-                                            children: [
-                                              Text(
-                                                swap['suggestion'] ?? '',
-                                                style: const TextStyle(
-                                                  fontWeight: FontWeight.w700,
-                                                  fontSize: 16,
-                                                ),
+                                        Row(
+                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                          children: [
+                                            Container(
+                                              padding: const EdgeInsets.all(12),
+                                              decoration: BoxDecoration(
+                                                color: greenLight,
+                                                borderRadius: BorderRadius.circular(12),
                                               ),
-                                              const SizedBox(height: 4),
-                                              Text(
-                                                swap['reason'] ?? '',
-                                                style: TextStyle(
-                                                  color: Colors.grey[600],
-                                                  fontSize: 13,
-                                                  height: 1.4,
-                                                ),
-                                              ),
-                                              const SizedBox(height: 10),
-                                              Row(
+                                              child: Icon(icons[i % icons.length], color: green, size: 24),
+                                            ),
+                                            const SizedBox(width: 14),
+                                            Expanded(
+                                              child: Column(
+                                                crossAxisAlignment: CrossAxisAlignment.start,
                                                 children: [
-                                                  if (swap['ratio'] != null)
-                                                    _swapChip(
-                                                      Icons.swap_horiz,
-                                                      swap['ratio'],
-                                                      Colors.blue[50]!,
-                                                      Colors.blue[700]!,
+                                                  Text(
+                                                    swap['suggestion']?.toString() ?? '',
+                                                    style: const TextStyle(
+                                                      fontWeight: FontWeight.w700,
+                                                      fontSize: 16,
                                                     ),
-                                                  const SizedBox(width: 8),
-                                                  if (swap['calories'] != null)
-                                                    _swapChip(
-                                                      Icons.local_fire_department,
-                                                      '${swap['calories']} kcal',
-                                                      Colors.orange[50]!,
-                                                      Colors.orange[700]!,
+                                                  ),
+                                                  const SizedBox(height: 4),
+                                                  Text(
+                                                    swap['reason']?.toString() ?? '',
+                                                    style: TextStyle(
+                                                      color: Colors.grey[600],
+                                                      fontSize: 13,
+                                                      height: 1.4,
                                                     ),
+                                                  ),
+                                                  const SizedBox(height: 10),
+                                                  Row(
+                                                    children: [
+                                                      if (swap['ratio'] != null)
+                                                        _swapChip(
+                                                          Icons.swap_horiz,
+                                                          swap['ratio'].toString(),
+                                                          Colors.blue[50]!,
+                                                          Colors.blue[700]!,
+                                                        ),
+                                                      const SizedBox(width: 8),
+                                                      if (swap['calories'] != null)
+                                                        _swapChip(
+                                                          Icons.local_fire_department,
+                                                          '${swap['calories']} kcal',
+                                                          Colors.orange[50]!,
+                                                          Colors.orange[700]!,
+                                                        ),
+                                                    ],
+                                                  ),
                                                 ],
                                               ),
-                                            ],
-                                          ),
+                                            ),
+                                          ],
                                         ),
+                                        if (_swapPlanContext != null) ...[
+                                          const SizedBox(height: 14),
+                                          ElevatedButton(
+                                            onPressed: _swapAccepting
+                                                ? null
+                                                : () => _acceptSwapSuggestion(
+                                                      Map<String, dynamic>.from(swap),
+                                                    ),
+                                            style: ElevatedButton.styleFrom(
+                                              backgroundColor: green,
+                                              foregroundColor: Colors.white,
+                                              padding: const EdgeInsets.symmetric(vertical: 12),
+                                              shape: RoundedRectangleBorder(
+                                                borderRadius: BorderRadius.circular(12),
+                                              ),
+                                            ),
+                                            child: _swapAccepting
+                                                ? const SizedBox(
+                                                    height: 20,
+                                                    width: 20,
+                                                    child: CircularProgressIndicator(
+                                                      strokeWidth: 2,
+                                                      color: Colors.white,
+                                                    ),
+                                                  )
+                                                : const Text(
+                                                    'Aceitar e registrar para hoje',
+                                                    style: TextStyle(fontWeight: FontWeight.w700),
+                                                  ),
+                                          ),
+                                        ],
                                       ],
                                     ),
                                   ),
@@ -1368,6 +1772,7 @@ class _HomeScreenState extends State<HomeScreen>
                                 onPressed: () {
                                   _swapController.clear();
                                   setState(() {
+                                    _swapPlanContext = null;
                                     _swapSearched = false;
                                     _swapResults = [];
                                     _swapError = '';

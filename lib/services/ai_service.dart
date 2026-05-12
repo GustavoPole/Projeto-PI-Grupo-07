@@ -76,6 +76,44 @@ class AiService {
       return [];
     }
   }
+
+  /// Registra a troca no servidor: novo alimento em [alimentos] + linha em [logs_diarios].
+  static Future<Map<String, dynamic>> acceptFoodSwap({
+    required String token,
+    required String data,
+    required int itemRefeicaoBaseId,
+    required Map<String, dynamic> novoAlimento,
+  }) async {
+    try {
+      final response = await http.post(
+        Uri.parse('$_baseUrl/api/accept-food-swap'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+        body: jsonEncode({
+          'data': data,
+          'item_refeicao_base_id': itemRefeicaoBaseId,
+          'novoAlimento': novoAlimento,
+        }),
+      );
+      Map<String, dynamic> body = {};
+      if (response.body.isNotEmpty) {
+        final decoded = jsonDecode(response.body);
+        if (decoded is Map) body = Map<String, dynamic>.from(decoded);
+      }
+      if (response.statusCode == 200 && body['success'] == true) {
+        return body;
+      }
+      return {
+        'success': false,
+        'message': body['message']?.toString() ?? 'Erro HTTP ${response.statusCode}',
+      };
+    } catch (e) {
+      return {'success': false, 'message': e.toString()};
+    }
+  }
+
   static Map<String, dynamic> _mockPlan({
     required String goal,
     required double weight,

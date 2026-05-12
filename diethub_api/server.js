@@ -183,16 +183,21 @@ Retorne APENAS um JSON válido, sem markdown, sem texto extra:
 });
 
 
-// GET /api/my-plan — retorna o plano ativo do usuario com refeicões e alimentos
+// GET /api/my-plan — retorna o plano ativo com refeições e alimentos (opcional ?date=YYYY-MM-DD aplica trocas do dia)
 app.get("/api/my-plan", authenticateToken, async (req, res) => {
   const userId = req.user.id;
+  const dateStr =
+    typeof req.query.date === "string" && /^\d{4}-\d{2}-\d{2}$/.test(req.query.date)
+      ? req.query.date
+      : new Date().toISOString().split("T")[0];
+
   try {
     const plans = await dbQuery(
       "SELECT id, nome, data_criacao FROM plano_alimentar WHERE usuario_id = ? AND ativo = 'Sim' LIMIT 1",
       [userId]
     );
     if (plans.length === 0) {
-      return res.status(200).json({ success: true, hasPlan: false });
+      return res.status(200).json({ success: true, hasPlan: false, dataReferencia: dateStr });
     }
     const plan = plans[0];
 
@@ -201,6 +206,7 @@ app.get("/api/my-plan", authenticateToken, async (req, res) => {
         r.id        AS refeicao_id,
         r.nome      AS refeicao_nome,
         TIME_FORMAT(r.horario_previsto, '%H:%i') AS horario,
+        i.id        AS item_refeicao_base_id,
         a.id        AS alimento_id,
         a.Nome      AS alimento_nome,
         a.porcao_g,
@@ -213,11 +219,44 @@ app.get("/api/my-plan", authenticateToken, async (req, res) => {
       LEFT JOIN itens_refeicao_base i ON i.refeicao_id = r.id
       LEFT JOIN alimentos a ON a.id = i.alimento_id
       WHERE r.plano_id = ?
-      ORDER BY r.horario_previsto, r.id`,
+      ORDER BY r.horario_previsto, r.id, i.id`,
       [plan.id]
     );
 
+    let swapByItem = {};
+    try {
+      const swapRows = await dbQuery(
+        `SELECT item_refeicao_base_id, alimento_substituto_id
+         FROM logs_diarios
+         WHERE usuario_id = ? AND data = ? AND item_refeicao_base_id IS NOT NULL AND alimento_substituto_id IS NOT NULL
+         ORDER BY id ASC`,
+        [userId, dateStr]
+      );
+      for (const s of swapRows) {
+        swapByItem[s.item_refeicao_base_id] = s.alimento_substituto_id;
+      }
+    } catch (e) {
+      if (e.code === "ER_BAD_FIELD_ERROR") {
+        swapByItem = {};
+      } else throw e;
+    }
+
+    const subIds = [...new Set(Object.values(swapByItem))];
+    let alimentoSubst = {};
+    if (subIds.length > 0) {
+      const ph = subIds.map(() => "?").join(",");
+      const subs = await dbQuery(`SELECT id, Nome, porcao_g, calorias, proteinas, carbos, gorduras FROM alimentos WHERE id IN (${ph})`, subIds);
+      for (const a of subs) alimentoSubst[a.id] = a;
+    }
+
+    const scaleMacro = (valueStr, factor) => (parseFloat(valueStr) || 0) * factor;
+
     const refeicaoMap = {};
+    let sumCal = 0;
+    let sumP = 0;
+    let sumC = 0;
+    let sumG = 0;
+
     for (const row of rows) {
       if (!refeicaoMap[row.refeicao_id]) {
         refeicaoMap[row.refeicao_id] = {
@@ -227,31 +266,187 @@ app.get("/api/my-plan", authenticateToken, async (req, res) => {
           alimentos: [],
         };
       }
-      if (row.alimento_id) {
-        refeicaoMap[row.refeicao_id].alimentos.push({
+      if (row.alimento_id && row.item_refeicao_base_id) {
+        const subId = swapByItem[row.item_refeicao_base_id];
+        const sub = subId ? alimentoSubst[subId] : null;
+        const nomeOriginal = row.alimento_nome;
+        const qtd = parseFloat(row.quantidade_g) || 0;
+        const porcStr = sub ? sub.porcao_g : row.porcao_g;
+        const porc = parseFloat(porcStr) || 100;
+        const factor = porc > 0 ? qtd / porc : 1;
+
+        const baseA = {
           id: row.alimento_id,
-          nome: row.alimento_nome,
-          quantidade_g: parseFloat(row.quantidade_g) || 0,
+          item_refeicao_base_id: row.item_refeicao_base_id,
+          nome: nomeOriginal,
+          quantidade_g: qtd,
+          porcao_g: String(porc),
           calorias: row.calorias || "0",
           proteinas: row.proteinas || "0",
           carbos: row.carbos || "0",
           gorduras: row.gorduras || "0",
-        });
+          trocaDoDia: false,
+        };
+        if (sub) {
+          baseA.trocaDoDia = true;
+          baseA.alimento_original_id = row.alimento_id;
+          baseA.alimento_original_nome = nomeOriginal;
+          baseA.id = sub.id;
+          baseA.nome = sub.Nome;
+          baseA.calorias = sub.calorias || "0";
+          baseA.proteinas = sub.proteinas || "0";
+          baseA.carbos = sub.carbos || "0";
+          baseA.gorduras = sub.gorduras || "0";
+          baseA.porcao_g = String(parseFloat(sub.porcao_g) || 100);
+        }
+
+        const calStr = sub ? sub.calorias : row.calorias;
+        const pStr = sub ? sub.proteinas : row.proteinas;
+        const cStr = sub ? sub.carbos : row.carbos;
+        const gStr = sub ? sub.gorduras : row.gorduras;
+        sumCal += scaleMacro(calStr, factor);
+        sumP += scaleMacro(pStr, factor);
+        sumC += scaleMacro(cStr, factor);
+        sumG += scaleMacro(gStr, factor);
+
+        refeicaoMap[row.refeicao_id].alimentos.push(baseA);
       }
     }
+
+    const kcalP = sumP * 4;
+    const kcalC = sumC * 4;
+    const kcalG = sumG * 9;
+    const kcalMacros = kcalP + kcalC + kcalG;
+    let pctProteina = 0;
+    let pctCarboidrato = 0;
+    let pctGordura = 0;
+    if (kcalMacros > 0) {
+      pctProteina = Math.round((100 * kcalP) / kcalMacros);
+      pctCarboidrato = Math.round((100 * kcalC) / kcalMacros);
+      pctGordura = Math.max(0, 100 - pctProteina - pctCarboidrato);
+    }
+
+    let metas = null;
+    try {
+      const mmRows = await dbQuery(
+        "SELECT calorias, proteinas, carbos, gordura FROM max_micronutrientes WHERE id_user = ? LIMIT 1",
+        [userId]
+      );
+      if (mmRows.length > 0) {
+        const m = mmRows[0];
+        metas = {
+          calorias: Number(m.calorias) || 0,
+          proteinas: Number(m.proteinas) || 0,
+          carbos: Number(m.carbos) || 0,
+          gordura: Number(m.gordura) || 0,
+        };
+      }
+    } catch (e) {
+      metas = null;
+    }
+
+    const resumo_nutricional = {
+      calorias_total: Math.round(sumCal),
+      proteinas_g: Math.round(sumP * 10) / 10,
+      carbos_g: Math.round(sumC * 10) / 10,
+      gorduras_g: Math.round(sumG * 10) / 10,
+      distribuicao_pct: {
+        proteina: pctProteina,
+        carboidrato: pctCarboidrato,
+        gordura: pctGordura,
+      },
+      metas,
+    };
 
     res.status(200).json({
       success: true,
       hasPlan: true,
+      dataReferencia: dateStr,
       plan: {
         id: plan.id,
         nome: plan.nome,
         data_criacao: plan.data_criacao,
         refeicoes: Object.values(refeicaoMap),
+        resumo_nutricional,
       },
     });
   } catch (error) {
     console.error("❌ [DB] Erro ao buscar plano:", error.message);
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+// POST /api/accept-food-swap — cadastra substituto em alimentos e registra em logs_diarios para o dia
+app.post("/api/accept-food-swap", authenticateToken, async (req, res) => {
+  const userId = req.user.id;
+  const { data, item_refeicao_base_id, novoAlimento } = req.body;
+
+  if (!data || !/^\d{4}-\d{2}-\d{2}$/.test(String(data))) {
+    return res.status(400).json({ success: false, message: "Campo data é obrigatório (YYYY-MM-DD)." });
+  }
+  const itemId = parseInt(item_refeicao_base_id, 10);
+  if (!Number.isFinite(itemId) || itemId < 1) {
+    return res.status(400).json({ success: false, message: "item_refeicao_base_id inválido." });
+  }
+  if (!novoAlimento || typeof novoAlimento.Nome !== "string" || !novoAlimento.Nome.trim()) {
+    return res.status(400).json({ success: false, message: "novoAlimento.Nome é obrigatório." });
+  }
+
+  try {
+    const itemRows = await dbQuery(
+      `SELECT i.id, i.quantidade_g, i.alimento_id, r.plano_id
+       FROM itens_refeicao_base i
+       INNER JOIN refeicoes_base r ON r.id = i.refeicao_id
+       INNER JOIN plano_alimentar p ON p.id = r.plano_id
+       WHERE i.id = ? AND p.usuario_id = ? AND p.ativo = 'Sim'`,
+      [itemId, userId]
+    );
+    if (itemRows.length === 0) {
+      return res.status(403).json({ success: false, message: "Item não pertence ao seu plano ativo." });
+    }
+    const { plano_id: planId, quantidade_g: qtdBase } = itemRows[0];
+
+    const nome = novoAlimento.Nome.trim();
+    const porcao = String(novoAlimento.porcao_g ?? "100");
+    const cal = String(novoAlimento.calorias ?? "0");
+    const prot = String(novoAlimento.proteinas ?? "0");
+    const carb = String(novoAlimento.carbos ?? "0");
+    const gord = String(novoAlimento.gorduras ?? "0");
+
+    const existing = await dbQuery("SELECT id FROM alimentos WHERE Nome = ?", [nome]);
+    let alimentoSubstitutoId;
+    if (existing.length > 0) {
+      alimentoSubstitutoId = existing[0].id;
+    } else {
+      const ins = await dbQuery(
+        "INSERT INTO alimentos (Nome, porcao_g, calorias, proteinas, carbos, gorduras) VALUES (?, ?, ?, ?, ?, ?)",
+        [nome, porcao, cal, prot, carb, gord]
+      );
+      alimentoSubstitutoId = ins.insertId;
+    }
+
+    await dbQuery(
+      "DELETE FROM logs_diarios WHERE usuario_id = ? AND data = ? AND item_refeicao_base_id = ?",
+      [userId, data, itemId]
+    );
+
+    await dbQuery(
+      `INSERT INTO logs_diarios (usuario_id, data, calorias_consumidas, status, plano_id, item_refeicao_base_id, alimento_substituto_id)
+       VALUES (?, ?, ?, 'no_plano', ?, ?, ?)`,
+      [userId, data, cal, planId, itemId, alimentoSubstitutoId]
+    );
+
+    console.log(`✅ [DB] Troca registrada: usuário ${userId}, item ${itemId} → alimento ${alimentoSubstitutoId} em ${data}`);
+    res.status(200).json({ success: true, alimento_substituto_id: alimentoSubstitutoId });
+  } catch (error) {
+    console.error("❌ [DB] Erro ao registrar troca:", error.message);
+    if (error.code === "ER_BAD_FIELD_ERROR") {
+      return res.status(500).json({
+        success: false,
+        message:
+          "Banco sem colunas de troca em logs_diarios. Execute o script diethub_api/sql/alter_logs_diarios_trocas.sql",
+      });
+    }
     res.status(500).json({ success: false, message: error.message });
   }
 });

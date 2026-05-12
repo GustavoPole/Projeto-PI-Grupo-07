@@ -4,23 +4,18 @@ Diagrama inicial do projeto diethub
 
 ---
 
-Fluxo de Atividades do Projeto
+Diagrama Casos de Uso
 
-<img width="728" height="951" alt="image" src="https://github.com/user-attachments/assets/3fa6053e-5d36-4849-aef0-1cafa1bc78bc" />
-
----
-Diagrama de Uso
-
-<img width="443" height="425" alt="image" src="https://github.com/user-attachments/assets/240738c7-b035-4d28-8708-0fc1e8ac6269" />
+<img width="443" height="492" alt="image" src="https://github.com/user-attachments/assets/46b0d71a-0c73-42db-b85f-6e1969a2211b" />
 
 ---
 
 Diagrama Fluxo de Usuario
 
-<img width="443" height="845" alt="image" src="https://github.com/user-attachments/assets/a9e0a90c-9eb7-4835-8758-814d57e8ecf5" />
+<img width="443" height="761" alt="image" src="https://github.com/user-attachments/assets/f998008d-22d5-4037-b881-5fea29947b2c" />
 
 ---
 
-Diagrama de Casos de Uso
+Diagrama de Uso
 
-<img width="443" height="424" alt="image" src="https://github.com/user-attachments/assets/2d0b23b4-d43b-45a3-807e-709b8af6b441" />
+<img width="443" height="306" alt="image" src="https://github.com/user-attachments/assets/fddb8bc3-6bcb-48da-9097-43e317ce9400" />

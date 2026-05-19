@@ -21,16 +21,16 @@ void main() {
       );
 
       // Valores esperados aproximados para TMB (Harris-Benedict) e macros
-      // TMB para Masculino, 70kg, 170cm, 25 anos: 88.36 + (13.4 * 70) + (4.8 * 170) - (5.7 * 25) = 1696.36
-      // TDEE (Sedentário, fator 1.2): 1696.36 * 1.2 = 2035.632
-      // Objetivo Manutenção: sem ajuste, então CaloriesGoal = 2036
-      // Macros para Manutenção (exemplo): Proteína (1.8g/kg) = 126g, Gordura (30% cal) = 67.8g, Carboidratos (restante) = 249.5g
+      // TMB para Masculino, 70kg, 170cm, 25 anos: 88.36 + (13.4 * 70) + (4.8 * 170) - (5.7 * 25) = 1699.86
+      // TDEE (Sedentário, fator 1.2): 1699.86 * 1.2 = 2039.832
+      // Objetivo Manutenção: sem ajuste, então CaloriesGoal = 2040 (arredondado)
+      // Macros para Manutenção: Proteína (1.8g/kg) = 126g, Gordura (30% cal) = 68g, Carboidratos (restante) = 231g
 
       expect(appState.hasPlan, isTrue);
-      expect(appState.caloriesGoal, closeTo(2036, 1)); // Permitir pequena variação devido a arredondamento
+      expect(appState.caloriesGoal, closeTo(2040, 1)); // Permitir pequena variação devido a arredondamento
       expect(appState.proteinGoal, closeTo(126, 1));
       expect(appState.fatGoal, closeTo(68, 1));
-      expect(appState.carbsGoal, closeTo(250, 1));
+      expect(appState.carbsGoal, closeTo(231, 1));
     });
 
     test('CT09 - Registro de refeições: addMeals deve atualizar o consumo diário', () {

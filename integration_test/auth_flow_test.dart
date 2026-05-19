@@ -29,13 +29,14 @@ void main() {
       expect(find.text('Crie sua conta'), findsOneWidget); // Verifica se está na tela de Registro
 
       // Preencher os campos de registro
-      await tester.enterText(find.widgetWithText(TextField, 'Nome completo'), 'Usuario Integracao');
-      await tester.enterText(find.widgetWithText(TextField, 'CPF'), '111.222.333-44');
-      await tester.enterText(find.widgetWithText(TextField, 'E-mail'), 'integracao@teste.com');
-      await tester.enterText(find.widgetWithText(TextField, 'Senha'), 'senhaIntegracao123');
-      await tester.enterText(find.widgetWithText(TextField, 'Confirmar Senha'), 'senhaIntegracao123');
+      await tester.enterText(find.byType(TextField).at(0), 'Usuario Integracao');
+      await tester.enterText(find.byType(TextField).at(1), '11122233344');
+      await tester.enterText(find.byType(TextField).at(2), 'integracao@teste.com');
+      await tester.enterText(find.byType(TextField).at(3), 'senhaIntegracao123');
+      await tester.enterText(find.byType(TextField).at(4), 'senhaIntegracao123');
 
       // Clicar no botão de cadastro
+      await tester.ensureVisible(find.byType(ElevatedButton));
       await tester.tap(find.byType(ElevatedButton));
       await tester.pumpAndSettle(const Duration(seconds: 3)); // Esperar o SnackBar e a navegação
 
@@ -45,10 +46,11 @@ void main() {
 
       // --- Fluxo de Login (TC04 - Login válido) ---
       // Preencher os campos de login com as credenciais recém-criadas
-      await tester.enterText(find.widgetWithText(TextField, 'E-mail'), 'integracao@teste.com');
-      await tester.enterText(find.widgetWithText(TextField, 'Senha'), 'senhaIntegracao123');
+      await tester.enterText(find.byType(TextField).at(0), 'integracao@teste.com');
+      await tester.enterText(find.byType(TextField).at(1), 'senhaIntegracao123');
 
       // Clicar no botão de login
+      await tester.ensureVisible(find.byType(ElevatedButton));
       await tester.tap(find.byType(ElevatedButton));
       await tester.pumpAndSettle(const Duration(seconds: 3)); // Esperar a navegação para Home
 
@@ -68,10 +70,11 @@ void main() {
       await tester.pumpAndSettle();
 
       // Preencher os campos de login com credenciais inválidas
-      await tester.enterText(find.widgetWithText(TextField, 'E-mail'), 'naoexiste@teste.com');
-      await tester.enterText(find.widgetWithText(TextField, 'Senha'), 'senhaerrada');
+      await tester.enterText(find.byType(TextField).at(0), 'naoexiste@teste.com');
+      await tester.enterText(find.byType(TextField).at(1), 'senhaerrada');
 
       // Clicar no botão de login
+      await tester.ensureVisible(find.byType(ElevatedButton));
       await tester.tap(find.byType(ElevatedButton));
       await tester.pumpAndSettle();
 

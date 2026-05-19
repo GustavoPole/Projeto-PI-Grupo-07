@@ -7,7 +7,8 @@ import 'package:projeto_pi/services/api_service.dart';
 
 // Mock do ApiService para evitar chamadas HTTP reais durante o teste
 class MockApiService extends ApiService {
-  static Future<Map<String, dynamic>> registerUser(
+  @override
+  Future<Map<String, dynamic>> registerUser(
     String nome,
     String cpf,
     String email,
@@ -33,8 +34,16 @@ class MockApiService extends ApiService {
 }
 
 void main() {
+  setUp(() {
+    ApiService.instance = MockApiService();
+  });
+
   group('RegisterScreen Tests', () {
     testWidgets('CT01 - Cadastro com dados válidos', (WidgetTester tester) async {
+      tester.view.physicalSize = const Size(1080, 2400);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.resetPhysicalSize);
+
       await tester.pumpWidget(
         ChangeNotifierProvider(
           create: (context) => AppState(),
@@ -45,15 +54,15 @@ void main() {
       );
 
       // Preencher os campos
-      // Preencher os campos
-       await tester.enterText(find.widgetWithText(TextField, 'Nome completo'), 'Samuel Teste');
-       await tester.enterText(find.widgetWithText(TextField, 'CPF'), '123.456.789-01');
-       await tester.enterText(find.widgetWithText(TextField, 'E-mail'), 'samuel@email.com');
-       await tester.enterText(find.widgetWithText(TextField, 'Senha'), 'senha123');
-       await tester.enterText(find.widgetWithText(TextField, 'Confirmar Senha'), 'senha123');
+      await tester.enterText(find.byType(TextField).at(0), 'Samuel Teste');
+      await tester.enterText(find.byType(TextField).at(1), '12345678901'); // CPF digits only to test formatter
+      await tester.enterText(find.byType(TextField).at(2), 'samuel@email.com');
+      await tester.enterText(find.byType(TextField).at(3), 'senha123');
+      await tester.enterText(find.byType(TextField).at(4), 'senha123');
       
 
       // Clicar no botão de cadastro
+      await tester.ensureVisible(find.byType(ElevatedButton));
       await tester.tap(find.byType(ElevatedButton));
       await tester.pumpAndSettle();
 
@@ -63,6 +72,10 @@ void main() {
     });
 
     testWidgets('CT02 - Cadastro com campos vazios', (WidgetTester tester) async {
+      tester.view.physicalSize = const Size(1080, 2400);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.resetPhysicalSize);
+
       await tester.pumpWidget(
         ChangeNotifierProvider(
           create: (context) => AppState(),
@@ -73,6 +86,7 @@ void main() {
       );
 
       // Não preencher os campos e tentar cadastrar
+      await tester.ensureVisible(find.byType(ElevatedButton));
       await tester.tap(find.byType(ElevatedButton));
       await tester.pumpAndSettle();
 
@@ -81,6 +95,10 @@ void main() {
     });
 
     testWidgets('CT03 - Cadastro com e-mail inválido', (WidgetTester tester) async {
+      tester.view.physicalSize = const Size(1080, 2400);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.resetPhysicalSize);
+
       await tester.pumpWidget(
         ChangeNotifierProvider(
           create: (context) => AppState(),
@@ -92,13 +110,14 @@ void main() {
 
       
       // Preencher os campos com e-mail inválido
-       await tester.enterText(find.widgetWithText(TextField, 'Nome completo'), 'Samuel Teste');
-       await tester.enterText(find.widgetWithText(TextField, 'CPF'), '123.456.789-01');
-       await tester.enterText(find.widgetWithText(TextField, 'E-mail'), 'samuelgmail.com'); // E-mail inválido
-       await tester.enterText(find.widgetWithText(TextField, 'Senha'), 'senha123');
-       await tester.enterText(find.widgetWithText(TextField, 'Confirmar Senha'), 'senha123');
+      await tester.enterText(find.byType(TextField).at(0), 'Samuel Teste');
+      await tester.enterText(find.byType(TextField).at(1), '12345678901');
+      await tester.enterText(find.byType(TextField).at(2), 'samuelgmail.com'); // E-mail inválido
+      await tester.enterText(find.byType(TextField).at(3), 'senha123');
+      await tester.enterText(find.byType(TextField).at(4), 'senha123');
 
       // Clicar no botão de cadastro
+      await tester.ensureVisible(find.byType(ElevatedButton));
       await tester.tap(find.byType(ElevatedButton));
       await tester.pumpAndSettle();
 

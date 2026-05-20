@@ -135,7 +135,7 @@ class _RegisterScreenState extends State<RegisterScreen>
 
     setState(() => _isLoading = true);
     try {
-      final res = await ApiService.registerUser(nome, cpf, email, password);
+      final res = await ApiService.instance.registerUser(nome, cpf, email, password);
       if (!mounted) return;
       if (res['success']) {
         // Salva nome e email no estado global

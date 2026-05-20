@@ -3,14 +3,16 @@ import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 
 class ApiService {
-  static String get _baseUrl {
+  static ApiService instance = ApiService();
+
+  String get _baseUrl {
     if (kIsWeb) return 'http://localhost:3000';
     if (defaultTargetPlatform == TargetPlatform.android)
       return 'http://10.0.2.2:3000';
     return 'http://localhost:3000';
   }
 
-  static Future<Map<String, dynamic>> registerUser(
+  Future<Map<String, dynamic>> registerUser(
     String nome,
     String cpf,
     String email,
@@ -36,7 +38,7 @@ class ApiService {
     }
   }
 
-  static Future<Map<String, dynamic>> loginUser(
+  Future<Map<String, dynamic>> loginUser(
     String email,
     String password,
   ) async {

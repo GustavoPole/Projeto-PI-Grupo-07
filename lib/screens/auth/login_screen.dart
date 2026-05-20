@@ -53,7 +53,7 @@ class _LoginScreenState extends State<LoginScreen>
     }
     setState(() => _isLoading = true);
     try {
-      final res = await ApiService.loginUser(
+      final res = await ApiService.instance.loginUser(
         _emailController.text.trim(),
         _passwordController.text.trim(),
       );
